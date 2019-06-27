@@ -12,10 +12,6 @@
 /// \brief
 ///
 
-
-
-// THIS FILE SHOULD NOT BE MODIFIED
-
 #ifndef O2_ITS_TRACKING_VERTEXER_H_
 #define O2_ITS_TRACKING_VERTEXER_H_
 
@@ -119,7 +115,7 @@ inline void Vertexer::setParameters(const VertexingParameters& verPar)
     mTraits->updateVertexingParameters(verPar);
 }
 
-void Vertexer::dumpTraits()
+inline void Vertexer::dumpTraits()
 {
   mTraits->dumpVertexerTraits();
 }
