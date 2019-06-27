@@ -12,6 +12,10 @@
 /// \brief
 ///
 
+
+
+// THIS FILE SHOULD NOT BE MODIFIED
+
 #ifndef O2_ITS_TRACKING_VERTEXER_H_
 #define O2_ITS_TRACKING_VERTEXER_H_
 
@@ -32,6 +36,7 @@
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/Cluster.h"
 
+
 namespace o2
 {
 namespace its
@@ -48,11 +53,11 @@ class Vertexer
   Vertexer& operator=(const Vertexer&) = delete;
 
   void setROframe(const uint32_t ROframe) { mROframe = ROframe; }
-  void setParameters(const VertexingParameters& verPar) { mVertParams = verPar; }
+  void setParameters(const VertexingParameters& verPar);
+  VertexingParameters getVertParameters() const;
 
   uint32_t getROFrame() const { return mROframe; }
   std::vector<Vertex> exportVertices();
-  VertexingParameters getVertParameters() const { return mVertParams; }
   VertexerTraits* getTraits() const { return mTraits; };
 
   float clustersToVertices(ROframe&, const bool useMc = false, std::ostream& = std::cout);
@@ -85,7 +90,6 @@ class Vertexer
  private:
   std::uint32_t mROframe = 0;
   VertexerTraits* mTraits = nullptr;
-  VertexingParameters mVertParams;
 };
 
 template <typename... T>
@@ -105,7 +109,17 @@ inline void Vertexer::findTrivialMCTracklets()
   mTraits->computeTrackletsPureMontecarlo();
 }
 
-inline void Vertexer::dumpTraits()
+inline VertexingParameters Vertexer::getVertParameters() const 
+{ 
+    return mTraits->getVertexingParameters();
+}
+
+inline void Vertexer::setParameters(const VertexingParameters& verPar)
+{ 
+    mTraits->updateVertexingParameters(verPar);
+}
+
+void Vertexer::dumpTraits()
 {
   mTraits->dumpVertexerTraits();
 }
