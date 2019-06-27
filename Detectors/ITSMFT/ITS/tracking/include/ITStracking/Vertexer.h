@@ -12,10 +12,6 @@
 /// \brief
 ///
 
-
-
-// THIS FILE SHOULD NOT BE MODIFIED
-
 #ifndef O2_ITS_TRACKING_VERTEXER_H_
 #define O2_ITS_TRACKING_VERTEXER_H_
 
