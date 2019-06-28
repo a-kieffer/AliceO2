@@ -68,7 +68,7 @@ class Vertexer
   void findVertices();
 
   // Utils
-  void dumpTraits();
+  inline void dumpTraits();
   template <typename... T>
   float evaluateTask(void (Vertexer::*)(T...), const char*, std::ostream& ostream, T&&... args);
 
