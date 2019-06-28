@@ -104,13 +104,13 @@ inline void Vertexer::findTrivialMCTracklets()
   mTraits->computeTrackletsPureMontecarlo();
 }
 
-inline VertexingParameters Vertexer::getVertParameters() const 
-{ 
+inline VertexingParameters Vertexer::getVertParameters() const
+{
   return mTraits->getVertexingParameters();
 }
 
 inline void Vertexer::setParameters(const VertexingParameters& verPar)
-{ 
+{
   mTraits->updateVertexingParameters(verPar);
 }
 
