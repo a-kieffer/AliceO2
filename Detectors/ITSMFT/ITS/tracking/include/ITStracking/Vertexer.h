@@ -32,7 +32,6 @@
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/Cluster.h"
 
-
 namespace o2
 {
 namespace its
