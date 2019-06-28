@@ -107,12 +107,12 @@ inline void Vertexer::findTrivialMCTracklets()
 
 inline VertexingParameters Vertexer::getVertParameters() const 
 { 
-    return mTraits->getVertexingParameters();
+  return mTraits->getVertexingParameters();
 }
 
 inline void Vertexer::setParameters(const VertexingParameters& verPar)
 { 
-    mTraits->updateVertexingParameters(verPar);
+  mTraits->updateVertexingParameters(verPar);
 }
 
 inline void Vertexer::dumpTraits()
