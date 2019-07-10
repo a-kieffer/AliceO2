@@ -92,6 +92,7 @@ class VertexerTraits
   std::vector<std::array<float, 4>> mCentroids;
   void processLines();
 
+
  protected:
   bool mIsGPU;
   VertexingParameters mVrtParams;

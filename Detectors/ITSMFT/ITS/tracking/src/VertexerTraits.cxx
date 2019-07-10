@@ -17,6 +17,7 @@
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Tracklet.h"
 #include <iostream>
+#include <math.h> 
 
 #define LAYER0_TO_LAYER1 0
 #define LAYER1_TO_LAYER2 1
@@ -47,27 +48,51 @@ void trackleterKernelSerial(
   const int maxTrackletsPerCluster = static_cast<int>(2e3))
 {
   foundTracklets.resize(clustersCurrentLayer.size(), 0);
+  std::cout<<"Size "<<clustersCurrentLayer.size() <<std::endl;
+
   // loop on layer1 clusters
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < clustersCurrentLayer.size(); ++iCurrentLayerClusterIndex) {
     int storedTracklets{ 0 };
     const Cluster currentCluster{ clustersCurrentLayer[iCurrentLayerClusterIndex] };
     const int layerIndex{ layerOrder == LAYER0_TO_LAYER1 ? 0 : 2 };
-    const int4 selectedBinsRect{ VertexerTraits::getBinsRect2(currentCluster, layerIndex, 0.f, 50.f, phiCut) };
-    if (selectedBinsRect.x != 0 || selectedBinsRect.y != 0 || selectedBinsRect.z != 0 || selectedBinsRect.w != 0) {
-      int phiBinsNum{ selectedBinsRect.w - selectedBinsRect.y + 1 };
+    // we get the rectangle which we will project on the next layer to know where to look for clusters
+    const int4 selectedBinsRect{ VertexerTraits::getBinsRect2(currentCluster, layerIndex, 0.f, 50.f, phiCut) }; //the problem may be here
+    if (selectedBinsRect.x != 0 || selectedBinsRect.y != 0 || selectedBinsRect.z != 0 || selectedBinsRect.w != 0) { //if we have a real rectangle
+      int phiBinsNum{ selectedBinsRect.w - selectedBinsRect.y + 1 }; //number of phi bins 
       if (phiBinsNum < 0) {
-        phiBinsNum += PhiBins;
-      }
-      // loop on phi bins next layer
-      for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = ++iPhiBin == PhiBins ? 0 : iPhiBin, iPhiCount++) {
-        const int firstBinIndex{ IndexTableUtils::getBinIndex(selectedBinsRect.x, iPhiBin) };
-        const int firstRowClusterIndex{ indexTableNext[firstBinIndex] };
-        const int maxRowClusterIndex{ indexTableNext[firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1] };
+        phiBinsNum += PhiBins; //idk but this doesn't seem to create problems
+      }     
+      std::cout<<"x "<<selectedBinsRect.x << " y " << selectedBinsRect.y<< " z " << selectedBinsRect.z<< " w " << selectedBinsRect.w<<std::endl;
+    // loop on phi bins next layer
+    // the problem is probably here
+
+      int lastClusterIndex = -1 ;
+    
+      for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = (++iPhiBin == PhiBins ? 0 : iPhiBin), iPhiCount++) { //ok
+        int firstBinIndex{ IndexTableUtils::getBinIndex(selectedBinsRect.x, iPhiBin) }; //get the starting bin
+        int firstRowClusterIndex{ indexTableNext[firstBinIndex] }; //get the index of the starting cluster on the next layer 
+        const int maxRowClusterIndex{ indexTableNext[firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1] }; //index of the last cluster from the row we have to look at 
+
+        if(firstRowClusterIndex==lastClusterIndex){
+          firstRowClusterIndex++; // it works
+        }
+
+        std::cout<<"First bin index : "<<firstBinIndex<<" Last bin index : "<<firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1<< std::endl;
+        std::cout<<"First cluster index : "<<firstRowClusterIndex<<" Last cluster index : "<<maxRowClusterIndex<< std::endl;
+        
+        
+
+
         // loop on clusters next layer
-        for (int iNextLayerClusterIndex{ firstRowClusterIndex }; iNextLayerClusterIndex <= maxRowClusterIndex && iNextLayerClusterIndex < (int)clustersNextLayer.size(); ++iNextLayerClusterIndex) {
+        for (int iNextLayerClusterIndex{ firstRowClusterIndex }; iNextLayerClusterIndex <= maxRowClusterIndex && iNextLayerClusterIndex < (int)clustersNextLayer.size(); ++iNextLayerClusterIndex) { 
+          //should be ok
           const Cluster& nextCluster{ clustersNextLayer[iNextLayerClusterIndex] };
           const char testMC{ !isMc || (nextLayerMClabels[iNextLayerClusterIndex] == currentLayerMClabels[iCurrentLayerClusterIndex] && nextLayerMClabels[iNextLayerClusterIndex] != -1) };
-          if (gpu::GPUCommonMath::Abs(currentCluster.phiCoordinate - nextCluster.phiCoordinate) < phiCut && testMC) {
+
+          if (gpu::GPUCommonMath::Abs(currentCluster.phiCoordinate - nextCluster.phiCoordinate) < phiCut && testMC ) {
+            std::cout<<"new Tracklet : Cluster layer 1 :  "<<iCurrentLayerClusterIndex<<"  Cluster next layer :"<< iNextLayerClusterIndex<<
+            "   Phi bin next layer :"<<iPhiBin<< std::endl;
+
             if (storedTracklets < maxTrackletsPerCluster) {
               if (layerOrder == LAYER0_TO_LAYER1) {
                 Tracklets.emplace_back(iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster);
@@ -78,7 +103,9 @@ void trackleterKernelSerial(
             }
           }
         }
+        lastClusterIndex = maxRowClusterIndex;
       }
+      
     }
     foundTracklets[iCurrentLayerClusterIndex] = storedTracklets;
   }
@@ -94,9 +121,30 @@ void trackletSelectionKernelSerial(
   const std::vector<int>& foundTracklets12,
   std::vector<Line>& destTracklets,
   std::vector<std::array<float, 7>>& tlv,
-  const float tanLambdaCut = 0.025f,
+  const bool isMc,
+  const std::vector<int>& MClabelsLayer0,
+  const std::vector<int>& MClabelsLayer1,
+  const float tanLambdaCut ,
   const int maxTracklets = static_cast<int>(2e3))
 {
+
+
+  std::cout<<"Number of clusters before reconstruction : "<<clustersNextLayer.size()<<" "<<clustersCurrentLayer.size()<<" "<<debugClustersLayer2.size()<<std::endl;
+  std::cout<<"Number of tracklets before selection : "<<tracklets01.size()<<" "<<tracklets12.size()<<std::endl;
+  
+
+  /* 
+  for(int i=0; i<foundTracklets01.size(); i++){
+    std::cout<<"Found tracklets 01 for cluster "<<i<<" : "<<foundTracklets01[i]<<std::endl;
+  }
+
+  for(int i=0; i<foundTracklets12.size(); i++){
+    std::cout<<"Found tracklets 12 for cluster "<<i<<" : "<<foundTracklets12[i]<<std::endl;
+  }*/
+
+  int totalTracklets=0;
+  int fakeTracklets=0;
+  int realTracklets=0;
   int offset01{ 0 };
   int offset12{ 0 };
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < clustersCurrentLayer.size(); ++iCurrentLayerClusterIndex) {
@@ -105,13 +153,30 @@ void trackletSelectionKernelSerial(
       for (int iTracklet01{ offset01 }; iTracklet01 < offset01 + foundTracklets01[iCurrentLayerClusterIndex]; ++iTracklet01) {
         const float deltaTanLambda{ gpu::GPUCommonMath::Abs(tracklets01[iTracklet01].tanLambda - tracklets12[iTracklet12].tanLambda) };
         if (deltaTanLambda < tanLambdaCut && validTracklets != maxTracklets) {
-          assert(tracklets01[iTracklet01].secondClusterIndex == tracklets12[iTracklet12].firstClusterIndex);
-          // tlv.push_back(std::array<float, 7>{ deltaTanLambda,
-          //                                     clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
-          //                                     clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
-          //                                     debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].zCoordinate, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].rCoordinate });
-          destTracklets.emplace_back(tracklets01[iTracklet01], clustersNextLayer.data(), clustersCurrentLayer.data());
           ++validTracklets;
+          totalTracklets++;
+          if(isMc){ //there are only real tracklets
+           assert(tracklets01[iTracklet01].secondClusterIndex == tracklets12[iTracklet12].firstClusterIndex);
+           tlv.push_back(std::array<float, 7>{ deltaTanLambda,
+                                               clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
+                                               clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
+                                               debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].zCoordinate, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].rCoordinate });
+          destTracklets.emplace_back(tracklets01[iTracklet01], clustersNextLayer.data(), clustersCurrentLayer.data());
+          }else{ //there are also false tracklets and we want to keep only the false ones
+            if ( MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] == MClabelsLayer1[tracklets01[iTracklet01].secondClusterIndex] 
+          && MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != -1){
+            realTracklets++;
+            }else{ //this is a fake tracklet
+              fakeTracklets++;
+              assert(tracklets01[iTracklet01].secondClusterIndex == tracklets12[iTracklet12].firstClusterIndex);
+              tlv.push_back(std::array<float, 7>{ deltaTanLambda,
+                                               clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
+                                               clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
+                                               debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].zCoordinate, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].rCoordinate });
+              destTracklets.emplace_back(tracklets01[iTracklet01], clustersNextLayer.data(), clustersCurrentLayer.data());
+
+            }
+          }
         }
       }
     }
@@ -123,6 +188,7 @@ void trackletSelectionKernelSerial(
     // //   printf("[INFO]: Fulfilled all the space with tracklets.\n");
     // // }
   }
+  std::cout<<"Total :"<<totalTracklets<<"    real : "<<realTracklets<<"     fake :"<<fakeTracklets<<std::endl;
 }
 
 VertexerTraits::VertexerTraits() : mAverageClustersRadii{ std::array<float, 3>{ 0.f, 0.f, 0.f } },
@@ -161,39 +227,107 @@ std::vector<int> VertexerTraits::getMClabelsLayer(const int layer) const
 
 void VertexerTraits::arrangeClusters(ROframe* event)
 {
+  
+  double NumClusters = 200;
+
+  double AngleOffset = constants::Math::TwoPi /NumClusters;
+  std::vector <double> x;
+  std::vector <double> y;
+  std::vector <double> z0;
+  std::vector <double> z1;
+  std::vector <double> z2;
+
+  double r0 = constants::its::LayersRCoordinate()[0];
+  double r1 = constants::its::LayersRCoordinate()[1];
+  double r2 = constants::its::LayersRCoordinate()[2];
+
+  for(int i=0; i<NumClusters; i++){
+    x.push_back(cos(i*AngleOffset));
+    y.push_back(sin(i*AngleOffset));
+    z0.push_back(0.01*(double)i);
+    z1.push_back(z0[i]*r1/r0);
+    z2.push_back(z1[i]*r2/r1);
+  }
+
   mEvent = event;
+  mEvent->clear();
+
   for (int iLayer{ 0 }; iLayer < constants::its::LayersNumberVertexer; ++iLayer) {
-    const auto& currentLayer{ event->getClustersOnLayer(iLayer) };
-    const size_t clustersNum{ currentLayer.size() };
+
+    //const auto& currentLayer{ event->getClustersOnLayer(iLayer) }; //line to change
+
+    std::vector <double> z;
+
+    switch(iLayer){
+      case 0 : z=z0; break;
+      case 1 : z= z1; break;
+      case 2 : z=z2; break;
+    }
+    
+    std::vector<o2::its::Cluster>  currentLayer;
+    double radius = constants::its::LayersRCoordinate()[iLayer];
+    for (int i=0; i<NumClusters; i++){
+      currentLayer.emplace_back(radius*x[i], radius*y[i], z[i], i); //last argument : cluster Id
+      event->addClusterLabelToLayer(iLayer, i); //last argument : label, goes into mClustersLabel
+      event -> addClusterToLayer(iLayer, radius*x[i], radius*y[i], z[i], i); //uses 1st constructor for clusters
+      
+    }
+
+
+    const size_t clustersNum{ currentLayer.size() }; //number of clusters in this layer
+
     if (clustersNum > 0) {
       if (clustersNum > mClusters[iLayer].capacity()) {
         mClusters[iLayer].reserve(clustersNum);
       }
       for (unsigned int iCluster{ 0 }; iCluster < clustersNum; ++iCluster) {
-        mClusters[iLayer].emplace_back(iLayer, currentLayer.at(iCluster));
+        mClusters[iLayer].emplace_back(iLayer, currentLayer.at(iCluster)); //we put all the clusters in the mCluster 
+        //uses the 2nd constructor and sets the indexTableIndex of the cluster
+        if(mClusters[iLayer].back().zCoordinate>16.333f){
+        std::cout<<" Index : "<< mClusters[iLayer].back().indexTableBinIndex<<std::endl;
+        }
         mAverageClustersRadii[iLayer] += mClusters[iLayer].back().rCoordinate;
       }
-      mAverageClustersRadii[iLayer] *= 1.f / clustersNum;
+
+      mAverageClustersRadii[iLayer] *= 1.f / clustersNum; //computation of the average value
 
       std::sort(mClusters[iLayer].begin(), mClusters[iLayer].end(), [](Cluster& cluster1, Cluster& cluster2) {
         return cluster1.indexTableBinIndex < cluster2.indexTableBinIndex;
-      });
+      }); //we sort the clusters in mClusters : the clusters with the smallest tableBinIndex are put first
+
       int previousBinIndex{ 0 };
       mIndexTables[iLayer][0] = 0;
-      for (unsigned int iCluster{ 0 }; iCluster < clustersNum; ++iCluster) {
-        const int currentBinIndex{ mClusters[iLayer][iCluster].indexTableBinIndex };
-        if (currentBinIndex > previousBinIndex) {
-          for (int iBin{ previousBinIndex + 1 }; iBin <= currentBinIndex; ++iBin) {
-            mIndexTables[iLayer][iBin] = iCluster;
+      for (unsigned int iCluster{ 0 }; iCluster < clustersNum; ++iCluster) { //for all clusters
+        const int currentBinIndex{ mClusters[iLayer][iCluster].indexTableBinIndex }; //we get the Bin index of the first cluster
+        // do not forget that they are sorted along their indexTableBinIndex
+        if (currentBinIndex > previousBinIndex) { //if the cluster is in another bin 
+          for (int iBin{ previousBinIndex + 1 }; iBin <= currentBinIndex; ++iBin) { //for all the bins between the previous bin and the new one
+            mIndexTables[iLayer][iBin] = iCluster; //we put the current cluster in the bin
           }
           previousBinIndex = currentBinIndex;
         }
       }
+      std::cout<<"Last  Previous Bin Index : "<<previousBinIndex<<std::endl;
       for (int iBin{ previousBinIndex + 1 }; iBin <= ZBins * PhiBins; iBin++) {
-        mIndexTables[iLayer][iBin] = static_cast<int>(clustersNum);
+        //not executed 
+        mIndexTables[iLayer][iBin] = static_cast<int>(clustersNum); //putting the last one everywhere
+        std::cout<<" Bin for last Cluster : "<<iBin<<std::endl;
       }
     }
+
+
+    for(int i=0; i<= ZBins * PhiBins; i++){
+      std::cout<<" "<<mIndexTables[iLayer][i];
+      if((i+1)%20==0){
+        std::cout<<" \n";
+      }
+    }
+    std::cout<<" \n";
+
   }
+
+
+
   mDeltaRadii10 = mAverageClustersRadii[1] - mAverageClustersRadii[0];
   mDeltaRadii21 = mAverageClustersRadii[2] - mAverageClustersRadii[1];
   mMaxDirectorCosine3 =
@@ -331,6 +465,8 @@ const std::vector<std::pair<int, int>> VertexerTraits::selectClusters(const std:
 void VertexerTraits::computeTrackletsPureMontecarlo()
 {
 
+  // arrangeClusters(NULL);
+
   std::cout << "Running in Montecarlo trivial mode\n";
   std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
@@ -340,6 +476,10 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
   std::vector<int> labelsMC0 = getMClabelsLayer(0);
   std::vector<int> labelsMC1 = getMClabelsLayer(1);
   std::vector<int> labelsMC2 = getMClabelsLayer(2);
+
+  for(int i=0; i< labelsMC0.size(); i++ ){
+    std::cout<<"Label "<<i<<" : "<<labelsMC0[i] << std::endl ;
+  }
 
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < mClusters[0].size(); ++iCurrentLayerClusterIndex) {
     auto& cluster{ mClusters[0][iCurrentLayerClusterIndex] };
@@ -382,19 +522,44 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
 
 void VertexerTraits::computeTracklets(const bool useMCLabel)
 {
+
+ // std::cout<<"tanLambda Cut :"<<mVrtParams.tanLambdaCut<<"  phi Cut :"<<mVrtParams.phiCut<<std::endl;
   // computeTrackletsPureMontecarlo();
-  if (useMCLabel)
+  if (useMCLabel){
     std::cout << "Running in Montecarlo check mode\n";
+  }
   std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
   std::vector<int> foundTracklets01;
   std::vector<int> foundTracklets12;
+
+  /* 
 
   ///TODO: Ugly hack!! The labels should be optionals in the trackleter kernel
   std::vector<int> labelsMC0 = useMCLabel ? getMClabelsLayer(0) : std::vector<int>();
   std::vector<int> labelsMC1 = useMCLabel ? getMClabelsLayer(1) : std::vector<int>();
   std::vector<int> labelsMC2 = useMCLabel ? getMClabelsLayer(2) : std::vector<int>();
 
+  */
+
+  std::vector<int> labelsMC0 = getMClabelsLayer(0);
+  std::vector<int> labelsMC1 = getMClabelsLayer(1);
+  std::vector<int> labelsMC2 = getMClabelsLayer(2);
+
+/* 
+  for(int i=0; i< labelsMC0.size(); i++ ){
+    std::cout<<"Label 0  "<<i<<" : "<<labelsMC0[i] << std::endl ;
+  }
+
+  for(int i=0; i< labelsMC1.size(); i++ ){
+    std::cout<<"Label 1  "<<i<<" : "<<labelsMC0[i] << std::endl ;
+  }
+
+  for(int i=0; i< labelsMC2.size(); i++ ){
+    std::cout<<"Label 2  "<<i<<" : "<<labelsMC0[i] << std::endl ;
+  }
+
+*/
   trackleterKernelSerial(
     mClusters[0],
     mClusters[1],
@@ -428,9 +593,28 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
     foundTracklets01,
     foundTracklets12,
     mTracklets,
-    mDeltaTanlambdas);
+    mDeltaTanlambdas,
+    useMCLabel,
+    labelsMC0,
+    labelsMC1,
+    mVrtParams.tanLambdaCut);
 }
-
+/* 
+const std::vector<Cluster>& clustersNextLayer,    //0
+  const std::vector<Cluster>& clustersCurrentLayer, //1
+  const std::vector<Cluster>& debugClustersLayer2,  //2
+  const std::vector<Tracklet>& tracklets01,
+  const std::vector<Tracklet>& tracklets12,
+  const std::vector<int>& foundTracklets01,
+  const std::vector<int>& foundTracklets12,
+  std::vector<Line>& destTracklets,
+  std::vector<std::array<float, 7>>& tlv,
+  const char isMc,
+  const std::vector<int>& MClabelsLayer0,
+  const std::vector<int>& MClabelsLayer1,
+  const float tanLambdaCut = 0.025f,
+  const int maxTracklets = static_cast<int>(2e3))
+*/
 void VertexerTraits::computeVertices()
 {
   const int numTracklets{ static_cast<int>(mTracklets.size()) };
