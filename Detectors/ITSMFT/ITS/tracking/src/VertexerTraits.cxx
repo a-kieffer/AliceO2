@@ -58,13 +58,19 @@ void trackleterKernelSerial(
       if (phiBinsNum < 0) {
         phiBinsNum += PhiBins;
       }
+      int lastClusterIndex{ -1 };
       // loop on phi bins next layer
       for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = ++iPhiBin == PhiBins ? 0 : iPhiBin, iPhiCount++) {
         const int firstBinIndex{ index_table_utils::getBinIndex(selectedBinsRect.x, iPhiBin) };
-        const int firstRowClusterIndex{ indexTableNext[firstBinIndex] };
+        int firstRowClusterIndex{ indexTableNext[firstBinIndex] };
         const int maxRowClusterIndex{ indexTableNext[firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1] };
+        if(firstRowClusterIndex==lastClusterIndex){
+          firstRowClusterIndex++;
+        } else {
+          std::cout<<"No, I'm not equal!\n";
+        }
         // loop on clusters next layer
-        for (int iNextLayerClusterIndex{ firstRowClusterIndex }; iNextLayerClusterIndex <= maxRowClusterIndex && iNextLayerClusterIndex < (int)clustersNextLayer.size(); ++iNextLayerClusterIndex) {
+        for (int iNextLayerClusterIndex{ firstRowClusterIndex }; iNextLayerClusterIndex < maxRowClusterIndex && iNextLayerClusterIndex < (int)clustersNextLayer.size(); ++iNextLayerClusterIndex) {
           const Cluster& nextCluster{ clustersNextLayer[iNextLayerClusterIndex] };
           const char testMC{ !isMc || (nextLayerMClabels[iNextLayerClusterIndex] == currentLayerMClabels[iCurrentLayerClusterIndex] && nextLayerMClabels[iNextLayerClusterIndex] != -1) };
           if (gpu::GPUCommonMath::Abs(currentCluster.phiCoordinate - nextCluster.phiCoordinate) < phiCut && testMC) {
@@ -78,6 +84,7 @@ void trackleterKernelSerial(
             }
           }
         }
+        lastClusterIndex = maxRowClusterIndex;
       }
     }
     foundTracklets[iCurrentLayerClusterIndex] = storedTracklets;
