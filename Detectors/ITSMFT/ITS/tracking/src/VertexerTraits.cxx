@@ -60,6 +60,7 @@ void trackleterKernelSerial(
       if (phiBinsNum < 0) {
         phiBinsNum += PhiBins;
       }
+      int lastClusterIndex{ -1 };
       // loop on phi bins next layer
       for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = ++iPhiBin == PhiBins ? 0 : iPhiBin, iPhiCount++) {
         const int firstBinIndex{ index_table_utils::getBinIndex(selectedBinsRect.x, iPhiBin) };
@@ -82,6 +83,7 @@ void trackleterKernelSerial(
             }
           }
         }
+        lastClusterIndex = maxRowClusterIndex;
       }
     }
     foundTracklets[iCurrentLayerClusterIndex] = storedTracklets;
