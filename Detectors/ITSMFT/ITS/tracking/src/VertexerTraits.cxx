@@ -63,6 +63,8 @@ void trackleterKernelSerial(
       for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = ++iPhiBin == PhiBins ? 0 : iPhiBin, iPhiCount++) {
         const int firstBinIndex{ index_table_utils::getBinIndex(selectedBinsRect.x, iPhiBin) };
         int firstRowClusterIndex{ indexTableNext[firstBinIndex] };
+        // const int firstBinIndex{ (iPhiBin == 0) || (indexTableNext[firstBinIndex] != indexTableNext[firstBinIndex - 1]) ? indexTableNext[firstBinIndex] : indexTableNext[firstBinIndex] + 1};     
+
         const int maxRowClusterIndex{ indexTableNext[firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1] };
         if(firstRowClusterIndex==lastClusterIndex){
           firstRowClusterIndex++;
@@ -170,7 +172,9 @@ void VertexerTraits::arrangeClusters(ROframe* event)
 {
   mEvent = event;
   for (int iLayer{ 0 }; iLayer < constants::its::LayersNumberVertexer; ++iLayer) {
+    
     const auto& currentLayer{ event->getClustersOnLayer(iLayer) };
+
     const size_t clustersNum{ currentLayer.size() };
     if (clustersNum > 0) {
       if (clustersNum > mClusters[iLayer].capacity()) {
