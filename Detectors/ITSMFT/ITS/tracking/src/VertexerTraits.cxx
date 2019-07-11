@@ -176,7 +176,9 @@ void VertexerTraits::arrangeClusters(ROframe* event)
 {
   mEvent = event;
   for (int iLayer{ 0 }; iLayer < constants::its::LayersNumberVertexer; ++iLayer) {
+    
     const auto& currentLayer{ event->getClustersOnLayer(iLayer) };
+
     const size_t clustersNum{ currentLayer.size() };
     if (clustersNum > 0) {
       if (clustersNum > mClusters[iLayer].capacity()) {
