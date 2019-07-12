@@ -115,7 +115,7 @@ class VertexerTraits
 //   // nothing
 // }
 
-inline void VertexerTraits::initialise(ROframe* event, int NumClusters=16)
+inline void VertexerTraits::initialise(ROframe* event, int NumClusters)
 {
   reset();
   arrangeClusters(event, NumClusters);
