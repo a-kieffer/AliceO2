@@ -55,10 +55,10 @@ class Vertexer
   std::vector<Vertex> exportVertices();
   VertexerTraits* getTraits() const { return mTraits; };
 
-  float clustersToVertices(ROframe&, const bool useMc = false, std::ostream& = std::cout);
+  float clustersToVertices(ROframe&, const bool useMc = false, std::ostream& = std::cout /* , int NumClusters=16*/);
 
   template <typename... T>
-  void initialiseVertexer(T&&... args);
+  void initialiseVertexer(T&&... args, int NumClusters=16);
 
   template <typename... T>
   void findTracklets(T&&... args);
@@ -70,7 +70,7 @@ class Vertexer
   // Utils
   void dumpTraits();
   template <typename... T>
-  float evaluateTask(void (Vertexer::*)(T...), const char*, std::ostream& ostream, T&&... args);
+  float evaluateTask(void (Vertexer::*)(T...), const char*, std::ostream& ostream, T&&... args/* , int NumClusters*/);
 
   // debug, TBR
   std::vector<Line> getLines() const;
@@ -80,7 +80,7 @@ class Vertexer
   std::vector<std::array<float, 7>> getDeltaTanLambdas() const;
   std::vector<std::array<float, 4>> getCentroids() const;
   std::vector<std::array<float, 6>> getLinesData() const;
-  void processLines();
+  void processLines(); //
 
  private:
   std::uint32_t mROframe = 0;
@@ -88,9 +88,9 @@ class Vertexer
 };
 
 template <typename... T>
-void Vertexer::initialiseVertexer(T&&... args)
+void Vertexer::initialiseVertexer(T&&... args, int NumClusters)
 {
-  mTraits->initialise(std::forward<T>(args)...);
+  mTraits->initialise(std::forward<T>(args)..., NumClusters);
 }
 
 template <typename... T>

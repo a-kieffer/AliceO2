@@ -33,7 +33,7 @@ float Vertexer::clustersToVertices(ROframe& event, const bool useMc, std::ostrea
 {
   ROframe* eventptr = &event;
   float total{ 0.f };
-  total += evaluateTask(&Vertexer::initialiseVertexer, "Vertexer initialisation", timeBenchmarkOutputStream, eventptr);
+  //total += evaluateTask(&Vertexer::initialiseVertexer, "Vertexer initialisation", timeBenchmarkOutputStream, eventptr);
   total += evaluateTask(&Vertexer::findTracklets, "Tracklet finding", timeBenchmarkOutputStream, useMc);
   total += evaluateTask(&Vertexer::findVertices, "Vertex finding", timeBenchmarkOutputStream);
 
