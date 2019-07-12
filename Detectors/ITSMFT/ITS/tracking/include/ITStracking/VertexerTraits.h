@@ -65,7 +65,7 @@ class VertexerTraits
 
   // virtual vertexer interface
   virtual void reset();
-  virtual void initialise(ROframe*);
+  virtual void initialise(ROframe*, int );
   virtual void computeTracklets(const bool useMCLabel = false);
   virtual void computeTrackletsPureMontecarlo();
   virtual void computeVertices();
@@ -79,7 +79,8 @@ class VertexerTraits
   // utils
   void setIsGPU(const bool);
   void dumpVertexerTraits();
-  void arrangeClusters(ROframe*);
+  void simpleClusters(ROframe * event, int NumClusters);
+  void arrangeClusters(ROframe*, int);
   std::vector<int> getMClabelsLayer(const int layer) const;
 
   // debug starts here
@@ -114,10 +115,10 @@ class VertexerTraits
 //   // nothing
 // }
 
-inline void VertexerTraits::initialise(ROframe* event)
+inline void VertexerTraits::initialise(ROframe* event, int NumClusters=16)
 {
   reset();
-  arrangeClusters(event);
+  arrangeClusters(event, NumClusters);
 }
 
 inline void VertexerTraits::setIsGPU(const bool isgpu)
