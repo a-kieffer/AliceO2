@@ -25,6 +25,7 @@
 #include "GPUChainTracking.h"
 #include "GPUChainITS.h"
 #endif
+#define __VERTEXER_ITS_DEBUG
 
 using Vertex = o2::dataformats::Vertex<o2::dataformats::TimeStamp<int>>;
 using namespace o2::gpu;
@@ -105,7 +106,6 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   TNtuple trackdeltaTanLambdas("dtl", "dtl", "deltatanlambda:c0z:c0r:c1z:c1r:c2z:c2r");
   TNtuple centroids("centroids", "centroids", "id:x:y:z:dca");
   TNtuple linesData("ld", "linesdata", "x:xy:xz:y:yz:z");
-  const o2::its::Line zAxis{ std::array<float, 3>{ 0.f, 0.f, -1.f }, std::array<float, 3>{ 0.f, 0.f, 1.f } };
 #endif
 
   // Benchmarks
@@ -199,6 +199,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
       timeBenchmark.Fill(total[0], total[1], total[2]);
     }
     outTree.Fill();
+    // break;
   }
 
   outTree.Write();

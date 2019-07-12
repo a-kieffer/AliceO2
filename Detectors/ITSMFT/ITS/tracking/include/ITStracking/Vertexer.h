@@ -77,7 +77,7 @@ class Vertexer
   std::vector<Tracklet> getTracklets01() const;
   std::vector<Tracklet> getTracklets12() const;
   std::array<std::vector<Cluster>, 3> getClusters() const;
-  std::vector<std::array<float, 7>> getDeltaTanLambdas() const;
+  std::vector<std::array<float, 8>> getDeltaTanLambdas() const;
   std::vector<std::array<float, 4>> getCentroids() const;
   std::vector<std::array<float, 6>> getLinesData() const;
   void processLines(); 
@@ -177,7 +177,7 @@ inline std::array<std::vector<Cluster>, 3> Vertexer::getClusters() const
   return mTraits->mClusters;
 }
 
-inline std::vector<std::array<float, 7>> Vertexer::getDeltaTanLambdas() const
+inline std::vector<std::array<float, 8>> Vertexer::getDeltaTanLambdas() const
 {
   return mTraits->mDeltaTanlambdas;
 }

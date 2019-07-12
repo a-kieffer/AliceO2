@@ -64,7 +64,7 @@ class VertexerTraits
 
   // virtual vertexer interface
   virtual void reset();
-  virtual void initialise(ROframe*, int );
+  virtual void initialise(ROframe*/* , int */);
   virtual void computeTracklets(const bool useMCLabel = false);
   virtual void computeTrackletsPureMontecarlo();
   virtual void computeVertices();
@@ -79,7 +79,7 @@ class VertexerTraits
   void setIsGPU(const bool);
   void dumpVertexerTraits();
   void simpleClusters(ROframe * event, int NumClusters);
-  void arrangeClusters(ROframe*, int);
+  void arrangeClusters(ROframe*/*, int*/);
   std::vector<int> getMClabelsLayer(const int layer) const;
 
   // debug starts here
@@ -87,10 +87,11 @@ class VertexerTraits
   std::vector<Tracklet> mComb01;
   std::vector<Tracklet> mComb12;
   std::array<std::vector<Cluster>, constants::its::LayersNumberVertexer> mClusters;
-  std::vector<std::array<float, 7>> mDeltaTanlambdas;
+  std::vector<std::array<float, 8>> mDeltaTanlambdas;
   std::vector<std::array<float, 6>> mLinesData;
   std::vector<std::array<float, 4>> mCentroids;
   void processLines();
+  void dumpIndexTable(const int);
 
  protected:
   bool mIsGPU;
@@ -112,7 +113,7 @@ class VertexerTraits
 inline void VertexerTraits::initialise(ROframe* event)
 {
   reset();
-  arrangeClusters(event, NumClusters);
+  arrangeClusters(event/* , NumClusters*/);
 }
 
 inline void VertexerTraits::setIsGPU(const bool isgpu)
@@ -150,6 +151,7 @@ inline GPU_HOST_DEVICE const int4 VertexerTraits::getBinsRect(const Cluster& cur
                gpu::GPUCommonMath::Min(constants::index_table::ZBins - 1, index_table_utils::getZBinIndex(layerIndex + 1, zRangeMax)),
                index_table_utils::getPhiBinIndex(math_utils::getNormalizedPhiCoordinate(phiRangeMax)) };
 }
+
 extern "C" VertexerTraits* createVertexerTraits();
 
 } // namespace its
