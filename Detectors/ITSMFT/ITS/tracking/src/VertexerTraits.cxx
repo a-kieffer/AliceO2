@@ -17,11 +17,8 @@
 #include "ITStracking/ROframe.h"
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Tracklet.h"
-<<<<<<< HEAD
-=======
 #include <iostream>
 #include <math.h> 
->>>>>>> Checkpoint
 
 #define LAYER0_TO_LAYER1 0
 #define LAYER1_TO_LAYER2 1
@@ -65,17 +62,35 @@ void trackleterKernelSerial(
     if (selectedBinsRect.x != 0 || selectedBinsRect.y != 0 || selectedBinsRect.z != 0 || selectedBinsRect.w != 0) {
       int phiBinsNum{ selectedBinsRect.w - selectedBinsRect.y + 1 };
       if (phiBinsNum < 0) {
-        phiBinsNum += PhiBins;
-      }
-      int lastClusterIndex{ -1 };
-      // loop on phi bins next layer
-      for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = ++iPhiBin == PhiBins ? 0 : iPhiBin, iPhiCount++) {
-        const int firstBinIndex{ index_table_utils::getBinIndex(selectedBinsRect.x, iPhiBin) };
+        phiBinsNum += PhiBins; //idk but this doesn't seem to create problems
+      }     
+      std::cout<<"x "<<selectedBinsRect.x << " y " << selectedBinsRect.y<< " z " << selectedBinsRect.z<< " w " << selectedBinsRect.w<<std::endl;
+    // loop on phi bins next layer
+    // the problem is probably here
+
+      int lastClusterIndex = -1 ;
+
+      std::cout<<"PhiBinsNum :  "<<phiBinsNum<<std::endl;
+      for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = (++iPhiBin == PhiBins ? 0 : iPhiBin), iPhiCount++) { //ok
+        int firstBinIndex{ index_table_utils::getBinIndex(selectedBinsRect.x, iPhiBin) }; //get the starting bin
+        //int firstRowClusterIndex{ indexTableNext[firstBinIndex] }; //get the index of the starting cluster on the next layer 
         const int firstRowClusterIndex{ indexTableNext[firstBinIndex] };
         const int maxRowClusterIndex{ indexTableNext[firstBinIndex + ZBins] };
+
+        /*
+        if(firstRowClusterIndex==lastClusterIndex){
+          firstRowClusterIndex++; // it works
+        }else {
+          std::cout<<"No, I'm not equal!\n";
+        }
+       */
+        std::cout<<"First bin index : "<<firstBinIndex<<" Last bin index : "<<firstBinIndex + selectedBinsRect.z - selectedBinsRect.x + 1<< std::endl;
+        std::cout<<"First cluster index : "<<firstRowClusterIndex<<" Last cluster index : "<<maxRowClusterIndex<< std::endl;
+        
+      
+
         // loop on clusters next layer
         for (int iNextLayerClusterIndex{ firstRowClusterIndex }; iNextLayerClusterIndex <= maxRowClusterIndex && iNextLayerClusterIndex < (int)clustersNextLayer.size(); ++iNextLayerClusterIndex) { 
-          //should be ok
           const Cluster& nextCluster{ clustersNextLayer[iNextLayerClusterIndex] };
 
           const auto& lblNext = evt->getClusterLabels(layerIndex, nextCluster.clusterId);
@@ -230,8 +245,6 @@ std::vector<int> VertexerTraits::getMClabelsLayer(const int layer) const
 
 
 void VertexerTraits::simpleClusters(ROframe * event, int NumClusters){
-  
-  //double NumClusters = 16;
 
   double AngleOffset = constants::math::TwoPi /(double)NumClusters;
   std::vector <double> x;
@@ -277,53 +290,12 @@ void VertexerTraits::simpleClusters(ROframe * event, int NumClusters){
 
 void VertexerTraits::arrangeClusters(ROframe* event, int NumClusters=16)
 {
-  /* */
-  //double NumClusters = 16;
-
-  double AngleOffset = constants::math::TwoPi /NumClusters;
-  std::vector <double> x;
-  std::vector <double> y;
-  std::vector <double> z0;
-  std::vector <double> z1;
-  std::vector <double> z2;
-
-  double r0 = constants::its::LayersRCoordinate()[0];
-  double r1 = constants::its::LayersRCoordinate()[1];
-  double r2 = constants::its::LayersRCoordinate()[2];
-
-  for(int i=0; i<NumClusters; i++){
-    x.push_back(cos(i*AngleOffset));
-    y.push_back(sin(i*AngleOffset));
-    z0.push_back(0.01*(double)i);
-    z1.push_back(z0[i]*r1/r0);
-    z2.push_back(z1[i]*r2/r1);
-  }
-
-
   mEvent= event;
+  simpleClusters(event, NumClusters);
+
   for (int iLayer{ 0 }; iLayer < constants::its::LayersNumberVertexer; ++iLayer) {
 
-    //const auto& currentLayer{ event->getClustersOnLayer(iLayer) }; //line to change
- /* */
-
-    std::vector <double> z;
-
-    switch(iLayer){
-      case 0 : z=z0; break;
-      case 1 : z=z1; break;
-      case 2 : z=z2; break;
-    }
-    
-    std::vector<o2::its::Cluster>  currentLayer;
-    double radius = constants::its::LayersRCoordinate()[iLayer];
-    for (int i=0; i<NumClusters; i++){
-      currentLayer.emplace_back(radius*x[i], radius*y[i], z[i], i); //last argument : cluster Id
-      //this last line may not be necessary if we use the usual line
-      event->addClusterLabelToLayer(iLayer, i); //last argument : label, goes into mClustersLabel
-      event -> addClusterToLayer(iLayer, radius*x[i], radius*y[i], z[i], i); //uses 1st constructor for clusters
-      
-    }
-
+    const auto& currentLayer{ event->getClustersOnLayer(iLayer) }; //line to change
     const size_t clustersNum{ currentLayer.size() }; //number of clusters in this layer
 
     if (clustersNum > 0) {
@@ -357,14 +329,10 @@ void VertexerTraits::arrangeClusters(ROframe* event, int NumClusters=16)
           previousBinIndex = currentBinIndex;
         }
       }
-      std::cout<<"Last  Previous Bin Index : "<<previousBinIndex<<std::endl;
       for (int iBin{ previousBinIndex + 1 }; iBin <= ZBins * PhiBins; iBin++) {
-        //not executed 
-        mIndexTables[iLayer][iBin] = static_cast<int>(clustersNum); //putting the last one everywhere
-        std::cout<<" Bin for last Cluster : "<<iBin<<std::endl;
+        mIndexTables[iLayer][iBin] = static_cast<int>(clustersNum); 
       }
     }
-
 
     for(int i=0; i<= ZBins * PhiBins; i++){
       std::cout<<" "<<mIndexTables[iLayer][i];
@@ -507,22 +475,7 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
     mVrtParams.phiCut,
     mVrtParams.tanLambdaCut);
 }
-/* 
-const std::vector<Cluster>& clustersNextLayer,    //0
-  const std::vector<Cluster>& clustersCurrentLayer, //1
-  const std::vector<Cluster>& debugClustersLayer2,  //2
-  const std::vector<Tracklet>& tracklets01,
-  const std::vector<Tracklet>& tracklets12,
-  const std::vector<int>& foundTracklets01,
-  const std::vector<int>& foundTracklets12,
-  std::vector<Line>& destTracklets,
-  std::vector<std::array<float, 7>>& tlv,
-  const char isMc,
-  const std::vector<int>& MClabelsLayer0,
-  const std::vector<int>& MClabelsLayer1,
-  const float tanLambdaCut = 0.025f,
-  const int maxTracklets = static_cast<int>(2e3))
-*/
+
 void VertexerTraits::computeVertices()
 {
   const int numTracklets{ static_cast<int>(mTracklets.size()) };

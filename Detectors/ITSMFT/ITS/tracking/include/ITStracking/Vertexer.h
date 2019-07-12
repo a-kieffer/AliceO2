@@ -58,7 +58,7 @@ class Vertexer
   float clustersToVertices(ROframe&, const bool useMc = false, std::ostream& = std::cout /* , int NumClusters=16*/);
 
   template <typename... T>
-  void initialiseVertexer(T&&... args, int NumClusters=16);
+  void initialiseVertexer( T&&... args);
 
   template <typename... T>
   void findTracklets(T&&... args);
@@ -80,7 +80,7 @@ class Vertexer
   std::vector<std::array<float, 7>> getDeltaTanLambdas() const;
   std::vector<std::array<float, 4>> getCentroids() const;
   std::vector<std::array<float, 6>> getLinesData() const;
-  void processLines(); //
+  void processLines(); 
 
  private:
   std::uint32_t mROframe = 0;
@@ -88,9 +88,9 @@ class Vertexer
 };
 
 template <typename... T>
-void Vertexer::initialiseVertexer(T&&... args, int NumClusters)
+void Vertexer::initialiseVertexer(T&&... args)
 {
-  mTraits->initialise(std::forward<T>(args)..., NumClusters);
+  mTraits->initialise(std::forward<T>(args)...);
 }
 
 template <typename... T>
