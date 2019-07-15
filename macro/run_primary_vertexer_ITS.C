@@ -44,10 +44,19 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
 
   std::string outfile;
   if (useGPU) {
-    outfile = "vertexer_gpu_data.root";
+    if(useMCcheck){
+      outfile = "vertexer_gpu_data_MCCheck.root";
+    }else{
+      outfile = "vertexer_gpu_data.root";
+    }
   } else {
-    outfile = "vertexer_serial_data.root";
+    if(useMCcheck){
+      outfile = "vertexer_serial_data_MCCheck.root";
+    }else{
+      outfile = "vertexer_serial_data.root";
+    }
   }
+
   const auto grp = o2::parameters::GRPObject::loadFrom(path + inputGRP);
   const bool isITS = grp->isDetReadOut(o2::detectors::DetID::ITS);
   const bool isContITS = grp->isDetContinuousReadOut(o2::detectors::DetID::ITS);
