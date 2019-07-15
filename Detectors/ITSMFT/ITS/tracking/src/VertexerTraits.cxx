@@ -126,6 +126,7 @@ void trackletSelectionKernelSerial(
   const std::vector<int>& MClabelsLayer1,
   const std::vector<int>& MClabelsLayer2,
   const float tanLambdaCut = 0.025f,
+  const float phiCut = 0.005f,
   const int maxTracklets = static_cast<int>(2e3))
 {
 
@@ -151,7 +152,8 @@ void trackletSelectionKernelSerial(
     for (int iTracklet12{ offset12 }; iTracklet12 < offset12 + foundTracklets12[iCurrentLayerClusterIndex]; ++iTracklet12) {
       for (int iTracklet01{ offset01 }; iTracklet01 < offset01 + foundTracklets01[iCurrentLayerClusterIndex]; ++iTracklet01) {
         const float deltaTanLambda{ gpu::GPUCommonMath::Abs(tracklets01[iTracklet01].tanLambda - tracklets12[iTracklet12].tanLambda) };
-        if (deltaTanLambda < tanLambdaCut && validTracklets != maxTracklets) {
+        const float deltaPhi{ gpu::GPUCommonMath::Abs(tracklets01[iTracklet01].phiCoordinate - tracklets12[iTracklet12].phiCoordinate) };
+        if (deltaTanLambda < tanLambdaCut && deltaPhi < phiCut && validTracklets != maxTracklets) {
           ++validTracklets;
           ++totalTracklets;
           //there are only real tracklets
@@ -407,8 +409,9 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
     mDeltaTanlambdas,
     labelsMC0,
     labelsMC1,
-    labelsMC2
-    //mVrtParams.tanLambdaCut
+    labelsMC2,
+    mVrtParams.phiCut,
+    mVrtParams.tanLambdaCut
   );
 }
 
