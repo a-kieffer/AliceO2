@@ -43,6 +43,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   // gSystem->Load("libO2ITStracking.so");
 
   std::string outfile;
+  
   if (useGPU) {
     if(useMCcheck){
       outfile = "vertexer_gpu_data_MCCheck.root";

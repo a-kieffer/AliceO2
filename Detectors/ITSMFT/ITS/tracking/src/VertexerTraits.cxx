@@ -52,7 +52,6 @@ void trackleterKernelSerial(
     assert(evt != nullptr);
   }
   foundTracklets.resize(clustersCurrentLayer.size(), 0);
-  std::cout << "Size " << clustersCurrentLayer.size() << std::endl;
 
   // loop on layer1 clusters
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < clustersCurrentLayer.size(); ++iCurrentLayerClusterIndex) {
@@ -134,17 +133,9 @@ void trackletSelectionKernelSerial(
   const int maxTracklets = static_cast<int>(2e3))
 {
 
-  std::cout << "Number of clusters before reconstruction : " << clustersNextLayer.size() << " " << clustersCurrentLayer.size() << " " << debugClustersLayer2.size() << std::endl;
-  std::cout << "Number of tracklets before selection : " << tracklets01.size() << " " << tracklets12.size() << std::endl;
+  //std::cout << "Number of clusters before reconstruction : " << clustersNextLayer.size() << " " << clustersCurrentLayer.size() << " " << debugClustersLayer2.size() << std::endl;
+  //std::cout << "Number of tracklets before selection : " << tracklets01.size() << " " << tracklets12.size() << std::endl;
 
-  /* 
-  for(int i=0; i<foundTracklets01.size(); i++){
-    std::cout<<"Found tracklets 01 for cluster "<<i<<" : "<<foundTracklets01[i]<<std::endl;
-  }
-
-  for(int i=0; i<foundTracklets12.size(); i++){
-    std::cout<<"Found tracklets 12 for cluster "<<i<<" : "<<foundTracklets12[i]<<std::endl;
-  }*/
 
   int totalTracklets = 0;
   int fakeTracklets = 0;
@@ -198,7 +189,7 @@ void trackletSelectionKernelSerial(
     }
 #endif
   }
-  std::cout << "Total :" << totalTracklets << "    real : " << realTracklets << "     fake :" << fakeTracklets << std::endl;
+  //std::cout << "Total :" << totalTracklets << "    real : " << realTracklets << "     fake :" << fakeTracklets << std::endl;
 } // namespace its
 
 VertexerTraits::VertexerTraits() : mAverageClustersRadii{ std::array<float, 3>{ 0.f, 0.f, 0.f } },
@@ -280,7 +271,7 @@ void VertexerTraits::arrangeClusters(ROframe* event /* , int numClusters = 16*/)
         mIndexTables[iLayer][iBin] = static_cast<int>(clustersNum);
       }
     }
-    dumpIndexTable(iLayer);
+    //dumpIndexTable(iLayer);
   }
 
   mDeltaRadii10 = mAverageClustersRadii[1] - mAverageClustersRadii[0];
@@ -309,8 +300,8 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
 
   // arrangeClusters(NULL);
 
-  std::cout << "Running in Montecarlo trivial mode\n";
-  std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
+  //std::cout << "Running in Montecarlo trivial mode\n";
+  //::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
   std::vector<int> foundTracklets01;
   std::vector<int> foundTracklets12;
@@ -365,7 +356,7 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
   // std::cout<<"tanLambda Cut :"<<mVrtParams.tanLambdaCut<<"  phi Cut :"<<mVrtParams.phiCut<<std::endl;
   // computeTrackletsPureMontecarlo();
   if (useMCLabel) {
-    std::cout << "Running in Montecarlo check mode\n";
+    //std::cout << "Running in Montecarlo check mode\n";
   }
   std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
@@ -410,6 +401,9 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
 
 void VertexerTraits::computeVertices()
 {
+
+  //creating the clusters
+
   const int numTracklets{ static_cast<int>(mTracklets.size()) };
   std::vector<bool> usedTracklets{};
   usedTracklets.resize(mTracklets.size(), false);
@@ -420,6 +414,7 @@ void VertexerTraits::computeVertices()
       if (usedTracklets[tracklet2])
         continue;
       if (Line::getDCA(mTracklets[tracklet1], mTracklets[tracklet2]) <= mVrtParams.pairCut) {
+        //creating a cluster with 2 lines
         mTrackletClusters.emplace_back(tracklet1, mTracklets[tracklet1], tracklet2, mTracklets[tracklet2]);
         std::array<float, 3> tmpVertex{ mTrackletClusters.back().getVertex() };
         if (tmpVertex[0] * tmpVertex[0] + tmpVertex[1] * tmpVertex[1] > 4.f) {
@@ -428,12 +423,14 @@ void VertexerTraits::computeVertices()
         }
         usedTracklets[tracklet1] = true;
         usedTracklets[tracklet2] = true;
+        //trying to add other lines to the cluster
         for (int tracklet3{ 0 }; tracklet3 < numTracklets; ++tracklet3) {
           if (usedTracklets[tracklet3])
             continue;
           if (Line::getDistanceFromPoint(mTracklets[tracklet3], tmpVertex) < mVrtParams.pairCut) {
             mTrackletClusters.back().add(tracklet3, mTracklets[tracklet3]);
             usedTracklets[tracklet3] = true;
+            //update of the position of the vertex
             tmpVertex = mTrackletClusters.back().getVertex();
           }
         }
@@ -442,9 +439,13 @@ void VertexerTraits::computeVertices()
     }
   }
 
+
+  //sorting the clusters by size
   std::sort(mTrackletClusters.begin(), mTrackletClusters.end(),
             [](ClusterLines& cluster1, ClusterLines& cluster2) { return cluster1.getSize() > cluster2.getSize(); });
   int noClusters{ static_cast<int>(mTrackletClusters.size()) };
+  //std::cout<<" Number of clusters at line 453 :  "<<noClusters<<std::endl;
+  //merging the clusters that are really close to another
   for (int iCluster1{ 0 }; iCluster1 < noClusters; ++iCluster1) {
     std::array<float, 3> vertex1{ mTrackletClusters[iCluster1].getVertex() };
     std::array<float, 3> vertex2{};
@@ -462,14 +463,20 @@ void VertexerTraits::computeVertices()
           }
         }
         mTrackletClusters.erase(mTrackletClusters.begin() + iCluster2);
+       // std::cout<<" Delete at line 471 "<<std::endl;
         --iCluster2;
         --noClusters;
       }
     }
   }
+
+    //std::cout<<" Number of clusters at line 479 :  "<<noClusters<<std::endl;
+
+  //removing the clusters that have less than 16 contributors if there are several clusters
   for (int iCluster{ 0 }; iCluster < noClusters; ++iCluster) {
     if (mTrackletClusters[iCluster].getSize() < mVrtParams.clusterContributorsCut && noClusters > 1) {
       mTrackletClusters.erase(mTrackletClusters.begin() + iCluster);
+      //std::cout<<" Delete at line 485 "<<std::endl;
       noClusters--;
       continue;
     }
@@ -481,6 +488,7 @@ void VertexerTraits::computeVertices()
     if (mTrackletClusters[iCluster].getVertex()[0] * mTrackletClusters[iCluster].getVertex()[0] +
           mTrackletClusters[iCluster].getVertex()[1] * mTrackletClusters[iCluster].getVertex()[1] <
         1.98 * 1.98) {
+         // std::cout<<" Emplacing "<<std::endl;
       mVertices.emplace_back(mTrackletClusters[iCluster].getVertex()[0],
                              mTrackletClusters[iCluster].getVertex()[1],
                              mTrackletClusters[iCluster].getVertex()[2],
