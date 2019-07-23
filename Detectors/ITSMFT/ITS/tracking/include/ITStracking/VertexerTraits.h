@@ -64,7 +64,7 @@ class VertexerTraits
 
   // virtual vertexer interface
   virtual void reset();
-  virtual void initialise(ROframe*/* , int */);
+  virtual void initialise(ROframe*);
   virtual void computeTracklets(const bool useMCLabel = false);
   virtual void computeTrackletsPureMontecarlo();
   virtual void computeVertices();
@@ -113,7 +113,7 @@ class VertexerTraits
 inline void VertexerTraits::initialise(ROframe* event)
 {
   reset();
-  arrangeClusters(event/* , NumClusters*/);
+  arrangeClusters(event);
 }
 
 inline void VertexerTraits::setIsGPU(const bool isgpu)

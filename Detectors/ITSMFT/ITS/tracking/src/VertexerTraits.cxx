@@ -24,6 +24,17 @@
 #define LAYER0_TO_LAYER1 0
 #define LAYER1_TO_LAYER2 1
 
+
+int maxNoVertices =0;
+int minNoVertices =100000000;
+int maxVertices =0;
+int minVertices =100000000;
+
+int tmp=0;
+
+
+
+
 namespace o2
 {
 namespace its
@@ -41,7 +52,7 @@ void trackleterKernelSerial(
   const std::vector<Cluster>& clustersCurrentLayer, // 1 1
   const std::array<int, ZBins * PhiBins + 1>& indexTableNext,
   const char layerOrder,
-  const float phiCut,
+  float phiCut,
   std::vector<Tracklet>& Tracklets,
   std::vector<int>& foundTracklets,
   const char isMc,
@@ -51,6 +62,12 @@ void trackleterKernelSerial(
   if (isMc) {
     assert(evt != nullptr);
   }
+ 
+  if(clustersNextLayer.size()<100){
+    phiCut = 5.6;
+  }
+
+
   foundTracklets.resize(clustersCurrentLayer.size(), 0);
 
   // loop on layer1 clusters
@@ -59,18 +76,16 @@ void trackleterKernelSerial(
     const Cluster currentCluster{ clustersCurrentLayer[iCurrentLayerClusterIndex] };
     const int layerIndex{ layerOrder == LAYER0_TO_LAYER1 ? 0 : 2 };
     // we get the rectangle which we will project on the next layer to know where to look for clusters
-    const int4 selectedBinsRect{ VertexerTraits::getBinsRect(currentCluster, layerIndex, 0.f, 50.f, phiCut / 2) };  // the problem may be here
+    const int4 selectedBinsRect{ VertexerTraits::getBinsRect(currentCluster, layerIndex, 0.f, 50.f, phiCut / 2) };  
     if (selectedBinsRect.x != 0 || selectedBinsRect.y != 0 || selectedBinsRect.z != 0 || selectedBinsRect.w != 0) { // if we have a real rectangle
       int phiBinsNum{ selectedBinsRect.w - selectedBinsRect.y + 1 };                                                // number of phi bins
       if (phiBinsNum < 0) {
-        phiBinsNum += PhiBins; //idk but this doesn't seem to create problems
+        phiBinsNum += PhiBins; 
       }
       // std::cout << "x " << selectedBinsRect.x << " y " << selectedBinsRect.y << " z " << selectedBinsRect.z << " w " << selectedBinsRect.w << std::endl;
       // loop on phi bins next layer
-      // the problem is probably here
 
       int lastClusterIndex = -1;
-
       // std::cout << "PhiBinsNum :  " << phiBinsNum << std::endl;
       for (int iPhiBin{ selectedBinsRect.y }, iPhiCount{ 0 }; iPhiCount < phiBinsNum; iPhiBin = (++iPhiBin == PhiBins ? 0 : iPhiBin), iPhiCount++) { //ok
         int firstBinIndex{ index_table_utils::getBinIndex(selectedBinsRect.x, iPhiBin) };                                                            //get the starting bin
@@ -133,7 +148,16 @@ void trackletSelectionKernelSerial(
   const int maxTracklets = static_cast<int>(2e3))
 {
 
+ 
+
+  tmp = clustersCurrentLayer.size()+ clustersNextLayer.size() + debugClustersLayer2.size();
+
+  if(clustersNextLayer.size()<100 && clustersNextLayer.size() > 0 ){
+    phiCut = 5.6;
+    tanLambdaCut = 3.5;
+  }
   //std::cout << "Number of clusters before reconstruction : " << clustersNextLayer.size() << " " << clustersCurrentLayer.size() << " " << debugClustersLayer2.size() << std::endl;
+  //std::cout << "Sum : " << clustersCurrentLayer.size()+ clustersNextLayer.size() + debugClustersLayer2.size() << std::endl;
   //std::cout << "Number of tracklets before selection : " << tracklets01.size() << " " << tracklets12.size() << std::endl;
 
 
@@ -163,7 +187,8 @@ void trackletSelectionKernelSerial(
           assert(tracklets01[iTracklet01].secondClusterIndex == tracklets12[iTracklet12].firstClusterIndex);
           const unsigned char isValidated = MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] == MClabelsLayer1[tracklets01[iTracklet01].secondClusterIndex] &&
                                             MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] == MClabelsLayer2[tracklets12[iTracklet12].secondClusterIndex] &&
-                                            MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != -1;
+                                            MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != -1 &&
+                                            MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != 2147483647 ; 
           tlv.push_back(std::array<float, 8>{ deltaTanLambda,
                                               clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
                                               clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
@@ -228,7 +253,7 @@ std::vector<int> VertexerTraits::getMClabelsLayer(const int layer) const
 
 void VertexerTraits::arrangeClusters(ROframe* event /* , int numClusters = 16*/)
 {
-  mEvent = event;
+  mEvent = event; //ROframe
   // simpleClusters(event, numClusters);
 
   for (int iLayer{ 0 }; iLayer < constants::its::LayersNumberVertexer; ++iLayer) {
@@ -301,7 +326,7 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
   // arrangeClusters(NULL);
 
   //std::cout << "Running in Montecarlo trivial mode\n";
-  //::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
+  std::cout << "clusters on L0: " << mClusters[0].size() << "  L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
   std::vector<int> foundTracklets01;
   std::vector<int> foundTracklets12;
@@ -345,6 +370,10 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
   }
 #endif
 
+  //std::cout << " tracklets 01 : "<<mComb01.size() << " tracklets 12 : "<< mComb12.size() << std::endl;
+
+  tmp = mComb01.size();
+
   for (auto& trk : mComb01) {
     mTracklets.emplace_back(trk, mClusters[0].data(), mClusters[1].data());
   }
@@ -358,7 +387,7 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
   if (useMCLabel) {
     //std::cout << "Running in Montecarlo check mode\n";
   }
-  std::cout << "clusters on L0: " << mClusters[0].size() << " clusters on L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
+  //std::cout << "clusters L0: " << mClusters[0].size() << "  L1: " << mClusters[1].size() << "  L2: " << mClusters[2].size() << std::endl;
 
   std::vector<int> foundTracklets01;
   std::vector<int> foundTracklets12;
@@ -404,7 +433,19 @@ void VertexerTraits::computeVertices()
 
   //creating the clusters
 
+  
   const int numTracklets{ static_cast<int>(mTracklets.size()) };
+
+
+  if (numTracklets < 20){
+    mVrtParams.pairCut  = 0.2;
+  }
+ 
+  //std::cout << "Number of Lines after selection : " << numTracklets << std::endl;
+
+  //std::random_shuffle ( mTracklets.begin(), mTracklets.end() );
+
+
   std::vector<bool> usedTracklets{};
   usedTracklets.resize(mTracklets.size(), false);
   for (int tracklet1{ 0 }; tracklet1 < numTracklets; ++tracklet1) {
@@ -413,11 +454,20 @@ void VertexerTraits::computeVertices()
     for (int tracklet2{ tracklet1 + 1 }; tracklet2 < numTracklets; ++tracklet2) {
       if (usedTracklets[tracklet2])
         continue;
-      if (Line::getDCA(mTracklets[tracklet1], mTracklets[tracklet2]) <= mVrtParams.pairCut) {
+      //std::cout<< "Pair line 2 : " << Line::getDCA(mTracklets[tracklet1], mTracklets[tracklet2]) << std::endl;
+      if (Line::getDCA(mTracklets[tracklet1], mTracklets[tracklet2]) <= mVrtParams.pairCut  ) {
+        //std::cout << "Adding line " << std::endl;
         //creating a cluster with 2 lines
         mTrackletClusters.emplace_back(tracklet1, mTracklets[tracklet1], tracklet2, mTracklets[tracklet2]);
+
+       // std::cout<<" Number of clusters at line "<< __LINE__<< " :  "<<mTrackletClusters.size()<<std::endl;
+
+
+        //uses a complicated constructor
         std::array<float, 3> tmpVertex{ mTrackletClusters.back().getVertex() };
+        //std::cout << " Temporary vertex :  x : "<< tmpVertex[0] << " y : "<< tmpVertex[1] << " z : "<<tmpVertex[2]<<std::endl;
         if (tmpVertex[0] * tmpVertex[0] + tmpVertex[1] * tmpVertex[1] > 4.f) {
+          //std::cout << "pop back "<< std::endl;
           mTrackletClusters.pop_back();
           break;
         }
@@ -425,9 +475,11 @@ void VertexerTraits::computeVertices()
         usedTracklets[tracklet2] = true;
         //trying to add other lines to the cluster
         for (int tracklet3{ 0 }; tracklet3 < numTracklets; ++tracklet3) {
-          if (usedTracklets[tracklet3])
+          if (usedTracklets[tracklet3]){
             continue;
-          if (Line::getDistanceFromPoint(mTracklets[tracklet3], tmpVertex) < mVrtParams.pairCut) {
+          }
+          //std::cout<< "Pair line 3: " << Line::getDCA(mTracklets[tracklet1], mTracklets[tracklet2]) << std::endl;
+          if (Line::getDistanceFromPoint(mTracklets[tracklet3], tmpVertex) < mVrtParams.pairCut   ) {
             mTrackletClusters.back().add(tracklet3, mTracklets[tracklet3]);
             usedTracklets[tracklet3] = true;
             //update of the position of the vertex
@@ -439,12 +491,13 @@ void VertexerTraits::computeVertices()
     }
   }
 
+ //std::cout<<" Number of clusters at line "<< __LINE__<< " :  "<<mTrackletClusters.size()<<std::endl;
 
   //sorting the clusters by size
   std::sort(mTrackletClusters.begin(), mTrackletClusters.end(),
             [](ClusterLines& cluster1, ClusterLines& cluster2) { return cluster1.getSize() > cluster2.getSize(); });
   int noClusters{ static_cast<int>(mTrackletClusters.size()) };
-  //std::cout<<" Number of clusters at line 453 :  "<<noClusters<<std::endl;
+
   //merging the clusters that are really close to another
   for (int iCluster1{ 0 }; iCluster1 < noClusters; ++iCluster1) {
     std::array<float, 3> vertex1{ mTrackletClusters[iCluster1].getVertex() };
@@ -470,14 +523,21 @@ void VertexerTraits::computeVertices()
     }
   }
 
-    //std::cout<<" Number of clusters at line 479 :  "<<noClusters<<std::endl;
+  //std::cout<<" Number of clusters at line 479 :  "<<noClusters<<std::endl;
 
   //removing the clusters that have less than 16 contributors if there are several clusters
+
   for (int iCluster{ 0 }; iCluster < noClusters; ++iCluster) {
-    if (mTrackletClusters[iCluster].getSize() < mVrtParams.clusterContributorsCut && noClusters > 1) {
+     //std::cout<<" Size of cluster " <<iCluster<<" : "<< mTrackletClusters[iCluster].getSize() << std::endl;
+  }
+
+ 
+  for (int iCluster{ 0 }; iCluster < noClusters; ++iCluster) {
+    if (mTrackletClusters[iCluster].getSize() < mVrtParams.clusterContributorsCut && noClusters > 1 && iCluster >0) {
       mTrackletClusters.erase(mTrackletClusters.begin() + iCluster);
-      //std::cout<<" Delete at line 485 "<<std::endl;
+      //std::cout<<" Delete cluster " <<iCluster<<" at line 485 "<<std::endl;
       noClusters--;
+     // std::cout<<" Number of clusters at line 488 :  "<<noClusters<<std::endl;
       continue;
     }
     float dist{ 0. };
@@ -485,10 +545,11 @@ void VertexerTraits::computeVertices()
       dist += Line::getDistanceFromPoint(line, mTrackletClusters[iCluster].getVertex()) /
               mTrackletClusters[iCluster].getSize();
     }
+    //std::cout<<" Number of clusters at line 495 :  "<<noClusters<<std::endl;
     if (mTrackletClusters[iCluster].getVertex()[0] * mTrackletClusters[iCluster].getVertex()[0] +
           mTrackletClusters[iCluster].getVertex()[1] * mTrackletClusters[iCluster].getVertex()[1] <
         1.98 * 1.98) {
-         // std::cout<<" Emplacing "<<std::endl;
+          // getVertex : returns an array of floats
       mVertices.emplace_back(mTrackletClusters[iCluster].getVertex()[0],
                              mTrackletClusters[iCluster].getVertex()[1],
                              mTrackletClusters[iCluster].getVertex()[2],
@@ -498,8 +559,26 @@ void VertexerTraits::computeVertices()
                              mTrackletClusters[iCluster].getAvgDistance2(), // In place of chi2
                              mEvent->getROFrameId());
       mEvent->addPrimaryVertex(mVertices.back().mX, mVertices.back().mY, mVertices.back().mZ);
+      break; // to store only one vertex per roframe
     }
   }
+
+
+
+  //std::cout<< "tmp : "<< tmp<<std::endl;
+
+  if (mVertices.size() > 0){ // there is a vertex
+    if(tmp > maxVertices)
+      maxVertices = tmp;
+    if (tmp < minVertices)
+      minVertices= tmp;
+  }else{ //there is no vertex
+    if(tmp > maxNoVertices)
+      maxNoVertices = tmp;
+    if (tmp < minNoVertices)
+      minNoVertices= tmp;
+  }
+
 }
 
 void VertexerTraits::dumpVertexerTraits()
