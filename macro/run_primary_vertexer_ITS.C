@@ -28,7 +28,7 @@
 #include "GPUChainTracking.h"
 #include "GPUChainITS.h"
 #endif
-#define __VERTEXER_ITS_DEBUG
+//#define __VERTEXER_ITS_DEBUG
 
 extern int minNoVertices ;
 extern int maxNoVertices ;
@@ -61,9 +61,9 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
     }
   } else {
     if(useMCcheck){
-      outfile = "vertexer_this_is_a_dummmy_name_serial_data_MCCheck.root";
+      outfile = "vertexer_serial_data_MCCheck.root";
     }else{
-      outfile = "vertexer_this_is_a_dummmy_name_serial_data.root";
+      outfile = "vertexer_serial_data.root";
     }
   }
 
@@ -175,15 +175,22 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
     std::array<float, 3> total{ 0.f, 0.f, 0.f };
     o2::its::ROframe* eventptr = &frame;
 
+/*
     total[0] = vertexer.evaluateTask(&o2::its::Vertexer::initialiseVertexer, "Vertexer initialisation", std::cout, eventptr);
     total[1] = vertexer.evaluateTask(&o2::its::Vertexer::findTracklets, "Tracklet finding", std::cout, useMCcheck);
     // total[1] = vertexer.evaluateTask(&o2::its::Vertexer::findTrivialMCTracklets, "Trivial Tracklet finding", std::cout);
     total[2] = vertexer.evaluateTask(&o2::its::Vertexer::findVertices, "Vertex finding", std::cout);
     // vertexer.findVerticesDBS();
+ */
+    vertexer.initialiseVertexer(eventptr);
+    //vertexer.findTracklets(useMCcheck);
+    vertexer.findTrivialMCTracklets();
+    vertexer.findVertices();
+    vertexer.processLines();
 
 #if defined(__VERTEXER_ITS_DEBUG)
-    vertexer.processLines();
-    vertexer.dumpTraits();
+    
+    //vertexer.dumpTraits();
     std::vector<std::array<float, 6>> linesdata = vertexer.getLinesData();
     std::vector<std::array<float, 4>> centroidsData = vertexer.getCentroids();
     std::vector<o2::its::Line> lines = vertexer.getLines();

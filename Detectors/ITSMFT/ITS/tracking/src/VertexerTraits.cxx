@@ -64,7 +64,7 @@ void trackleterKernelSerial(
   }
  
   if(clustersNextLayer.size()<100){
-    phiCut = 5.6;
+    //phiCut = 5.6;
   }
 
 
@@ -154,8 +154,8 @@ void trackletSelectionKernelSerial(
   tmp = clustersCurrentLayer.size()+ clustersNextLayer.size() + debugClustersLayer2.size();
 
   if(clustersNextLayer.size()<100 && clustersNextLayer.size() > 0 ){
-    phiCut = 5.6f;
-    tanLambdaCut = 3.5f;
+    //phiCut = 5.6f;
+    //tanLambdaCut = 3.5f;
   }
   //std::cout << "Number of clusters before reconstruction : " << clustersNextLayer.size() << " " << clustersCurrentLayer.size() << " " << debugClustersLayer2.size() << std::endl;
   //std::cout << "Sum : " << clustersCurrentLayer.size()+ clustersNextLayer.size() + debugClustersLayer2.size() << std::endl;
@@ -205,7 +205,7 @@ void trackletSelectionKernelSerial(
     offset12 += foundTracklets12[iCurrentLayerClusterIndex];
   }
 #if defined(__VERTEXER_ITS_DEBUG)
-  std::cout << "Total :" << totalTracklets << "    real : " << realTracklets << "     fake :" << fakeTracklets << std::endl;
+  //std::cout << "Total :" << totalTracklets << "    real : " << realTracklets << "     fake :" << fakeTracklets << std::endl;
 #endif
 }
 
@@ -324,13 +324,16 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
   std::vector<int> foundTracklets12;
 
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < mClusters[0].size(); ++iCurrentLayerClusterIndex) {
+    //std::cout << "iCluster : : " << iCurrentLayerClusterIndex << std::endl;
     auto& currentCluster{ mClusters[0][iCurrentLayerClusterIndex] };
     for (unsigned int iNextLayerClusterIndex = 0; iNextLayerClusterIndex < mClusters[1].size(); iNextLayerClusterIndex++) {
+      //std::cout << "iCluster next layer : " << iNextLayerClusterIndex << std::endl;
       const Cluster& nextCluster{ mClusters[1][iNextLayerClusterIndex] };
       const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId);
       const auto& lblCurr = mEvent->getClusterLabels(0, currentCluster.clusterId);
       if (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid()) {
         mComb01.emplace_back(iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster);
+        //std::cout << "Indexes : " << lblCurr.getTrackID() << "   ,   " <<lblNext.getTrackID() << std::endl;
       }
     }
   }
@@ -362,7 +365,7 @@ void VertexerTraits::computeTrackletsPureMontecarlo()
   }
 #endif
 
-  //std::cout << " tracklets 01 : "<<mComb01.size() << " tracklets 12 : "<< mComb12.size() << std::endl;
+  std::cout << " tracklets 01 : "<<mComb01.size() << " tracklets 12 : "<< mComb12.size() << std::endl;
 
   tmp = mComb01.size();
 
@@ -431,7 +434,7 @@ void VertexerTraits::computeVertices()
 
 
   if (numTracklets < 20){
-    mVrtParams.pairCut  = 0.2;
+    //mVrtParams.pairCut  = 0.2;
   }
  
   //std::cout << "Number of Lines after selection : " << numTracklets << std::endl;
