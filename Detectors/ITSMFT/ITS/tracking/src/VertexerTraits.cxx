@@ -23,7 +23,7 @@
 
 #define LAYER0_TO_LAYER1 0
 #define LAYER1_TO_LAYER2 1
-
+#define __VERTEXER_ITS_DEBUG 1
 
 int maxNoVertices =0;
 int minNoVertices =100000000;
@@ -113,8 +113,8 @@ void trackleterKernelSerial(
           const unsigned char testMC{ !isMc || (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid()) }; // isValid() : isSet() && !isNoise()
           if (gpu::GPUCommonMath::Abs(currentCluster.phiCoordinate - nextCluster.phiCoordinate) < phiCut && testMC) {
 
-            std::cout<<"new Tracklet : Cluster layer 1 :  "<<iCurrentLayerClusterIndex<<"  Cluster next layer :"<< iNextLayerClusterIndex<<
-            "   Phi bin next layer :"<<iPhiBin<< std::endl;
+  //          std::cout<<"new Tracklet : Cluster layer 1 :  "<<iCurrentLayerClusterIndex<<"  Cluster next layer :"<< iNextLayerClusterIndex<<
+  //          "   Phi bin next layer :"<<iPhiBin<< std::endl;
 
             if (storedTracklets < maxTrackletsPerCluster) {
               if (layerOrder == LAYER0_TO_LAYER1) {
@@ -142,9 +142,10 @@ void trackletSelectionKernelSerial(
   const std::vector<int>& foundTracklets01,
   const std::vector<int>& foundTracklets12,
   std::vector<Line>& destTracklets,
-  std::vector<std::array<float, 7>>& tlv,
-  const float tanLambdaCut = 0.025f,
-  const float phiCut = 0.005f,
+  std::vector<std::array<float, 8>>& tlv,
+  const ROframe* evt = nullptr,
+  float tanLambdaCut = 0.025f,
+  float phiCut = 0.005f,
   const int maxTracklets = static_cast<int>(2e3))
 {
 
@@ -153,8 +154,8 @@ void trackletSelectionKernelSerial(
   tmp = clustersCurrentLayer.size()+ clustersNextLayer.size() + debugClustersLayer2.size();
 
   if(clustersNextLayer.size()<100 && clustersNextLayer.size() > 0 ){
-    phiCut = 5.6;
-    tanLambdaCut = 3.5;
+    phiCut = 5.6f;
+    tanLambdaCut = 3.5f;
   }
   //std::cout << "Number of clusters before reconstruction : " << clustersNextLayer.size() << " " << clustersCurrentLayer.size() << " " << debugClustersLayer2.size() << std::endl;
   //std::cout << "Sum : " << clustersCurrentLayer.size()+ clustersNextLayer.size() + debugClustersLayer2.size() << std::endl;
@@ -175,47 +176,38 @@ void trackletSelectionKernelSerial(
         if (deltaTanLambda < tanLambdaCut && deltaPhi < phiCut && validTracklets != maxTracklets) {
           assert(tracklets01[iTracklet01].secondClusterIndex == tracklets12[iTracklet12].firstClusterIndex);
 #if defined(__VERTEXER_ITS_DEBUG)
-          tlv.push_back(std::array<float, 7>{ deltaTanLambda,
-                                              clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
-                                              clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
-                                              debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].zCoordinate, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].rCoordinate });
-#endif
-          destTracklets.emplace_back(tracklets01[iTracklet01], clustersNextLayer.data(), clustersCurrentLayer.data());
-          ++validTracklets;
-          ++totalTracklets;
-          //there are only real tracklets
-          assert(tracklets01[iTracklet01].secondClusterIndex == tracklets12[iTracklet12].firstClusterIndex);
-          const unsigned char isValidated = MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] == MClabelsLayer1[tracklets01[iTracklet01].secondClusterIndex] &&
-                                            MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] == MClabelsLayer2[tracklets12[iTracklet12].secondClusterIndex] &&
-                                            MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != -1 &&
-                                            MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != 2147483647 ; 
+          // there are only real tracklets
+          // const unsigned char isValidated = MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] == MClabelsLayer1[tracklets01[iTracklet01].secondClusterIndex] &&
+          //                                   MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] == MClabelsLayer2[tracklets12[iTracklet12].secondClusterIndex] &&
+          //                                   MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != -1 &&
+          //                                   MClabelsLayer0[tracklets01[iTracklet01].firstClusterIndex] != 2147483647 ; 
+          const auto& lblClus0 = evt->getClusterLabels(0, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].clusterId);
+          const auto& lblClus1 = evt->getClusterLabels(1, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].clusterId);
+          const auto& lblClus2 = evt->getClusterLabels(2, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].clusterId);
+          const unsigned char isValidated{ (lblClus0.getTrackID() == lblClus1.getTrackID() && lblClus0.getTrackID() == lblClus2.getTrackID() && lblClus0.isValid()) };
           tlv.push_back(std::array<float, 8>{ deltaTanLambda,
                                               clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
                                               clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
                                               debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].zCoordinate, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].rCoordinate,
                                               static_cast<float>(isValidated) });
-          destTracklets.emplace_back(tracklets01[iTracklet01], clustersNextLayer.data(), clustersCurrentLayer.data());
           if (isValidated) {
             ++realTracklets;
           } else {
             ++fakeTracklets;
           }
+#endif
+          destTracklets.emplace_back(tracklets01[iTracklet01], clustersNextLayer.data(), clustersCurrentLayer.data());
+          ++validTracklets;
         }
       }
     }
     offset01 += foundTracklets01[iCurrentLayerClusterIndex];
     offset12 += foundTracklets12[iCurrentLayerClusterIndex];
-
-#if defined(__VERTEXER_ITS_DEBUG)
-    if (validTracklets != maxTracklets) {
-      new (destTracklets + stride + validTracklets) Line(); // always complete line with empty one unless all spaces taken
-    } else {
-      printf("[INFO]: Fulfilled all the space with tracklets.\n");
-    }
-#endif
   }
-  //std::cout << "Total :" << totalTracklets << "    real : " << realTracklets << "     fake :" << fakeTracklets << std::endl;
-} // namespace its
+#if defined(__VERTEXER_ITS_DEBUG)
+  std::cout << "Total :" << totalTracklets << "    real : " << realTracklets << "     fake :" << fakeTracklets << std::endl;
+#endif
+}
 
 VertexerTraits::VertexerTraits() : mAverageClustersRadii{ std::array<float, 3>{ 0.f, 0.f, 0.f } },
                                    mMaxDirectorCosine3{ 0.f }
@@ -424,6 +416,7 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
     foundTracklets12,
     mTracklets,
     mDeltaTanlambdas,
+    mEvent,
     mVrtParams.phiCut,
     mVrtParams.tanLambdaCut);
 }
