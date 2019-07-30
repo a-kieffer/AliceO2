@@ -49,6 +49,22 @@ struct lightVertex {
   int mTimeStamp;
 };
 
+
+struct label {
+  /*
+  label(int TId, int MId, int EId, float P){
+    TrackID= TId;
+    MotherId = MId;
+    EventID=EId;
+    Pt=P;
+  }; */
+  int TrackID;
+  int MotherId;
+  int EventID;
+  float Pt;
+};
+
+
 inline lightVertex::lightVertex(float x, float y, float z, std::array<float, 6> rms2, int cont, float avgdis2, int stamp) : mX(x), mY(y), mZ(z), mRMS2(rms2), mAvgDistance2(avgdis2), mContributors(cont), mTimeStamp(stamp)
 {
 }
@@ -66,7 +82,7 @@ class VertexerTraits
   virtual void reset();
   virtual void initialise(ROframe*);
   virtual void computeTracklets(const bool useMCLabel = false);
-  virtual void computeTrackletsPureMontecarlo();
+  virtual void computeTrackletsPureMontecarlo(std::vector<o2::its::label>  LabelVector);
   virtual void computeVertices();
 
   void updateVertexingParameters(const VertexingParameters& vrtPar);
@@ -90,6 +106,7 @@ class VertexerTraits
   std::vector<std::array<float, 8>> mDeltaTanlambdas;
   std::vector<std::array<float, 6>> mLinesData;
   std::vector<std::array<float, 4>> mCentroids;
+  std::vector<o2::its::label> * mLabels;
   void processLines();
   void dumpIndexTable(const int);
 

@@ -150,7 +150,7 @@ int run_primary_vertexer_ITS(const bool useGPU = false,
   o2::its::ROframe frame(-123);
 
   o2::its::VertexerTraits* traits = nullptr;
-  o2::its::VertexingParameters par;
+
 
 #if defined(__VERTEXER_ITS_GPU)
   if (useGPU) {
