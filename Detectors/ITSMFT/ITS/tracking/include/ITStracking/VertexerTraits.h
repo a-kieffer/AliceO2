@@ -17,12 +17,14 @@
 
 #include <array>
 #include <vector>
+#include <map>
 
 #include "ITStracking/Cluster.h"
 #include "ITStracking/Configuration.h"
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Definitions.h"
 #include "ITStracking/Tracklet.h"
+#include "SimulationDataFormat/MCCompLabel.h"
 
 #include "GPUCommonMath.h"
 
@@ -58,9 +60,9 @@ struct label {
     EventID=EId;
     Pt=P;
   }; */
-  int TrackID;
+  int TrackId;
   int MotherId;
-  int EventID;
+  int EventId;
   float Pt;
 };
 
@@ -82,7 +84,7 @@ class VertexerTraits
   virtual void reset();
   virtual void initialise(ROframe*);
   virtual void computeTracklets(const bool useMCLabel = false);
-  virtual void computeTrackletsPureMontecarlo(std::vector<o2::its::label>  LabelVector);
+  virtual void computeTrackletsPureMontecarlo(std::map <o2::MCCompLabel,o2::its::label>   LabelVector);
   virtual void computeVertices();
 
   void updateVertexingParameters(const VertexingParameters& vrtPar);
@@ -103,7 +105,7 @@ class VertexerTraits
   std::vector<Tracklet> mComb01;
   std::vector<Tracklet> mComb12;
   std::array<std::vector<Cluster>, constants::its::LayersNumberVertexer> mClusters;
-  std::vector<std::array<float, 8>> mDeltaTanlambdas;
+ std::vector<std::array<float, 9>> mTrackletInfo;
   std::vector<std::array<float, 6>> mLinesData;
   std::vector<std::array<float, 4>> mCentroids;
   std::vector<o2::its::label> * mLabels;

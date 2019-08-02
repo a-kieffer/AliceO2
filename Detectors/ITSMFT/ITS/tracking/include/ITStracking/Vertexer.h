@@ -20,17 +20,20 @@
 #include <iomanip>
 #include <array>
 #include <iosfwd>
+#include <map>
 
 #include "ITStracking/ROframe.h"
 #include "ITStracking/Constants.h"
 #include "ITStracking/Configuration.h"
 #include "ITStracking/VertexerTraits.h"
 #include "ReconstructionDataFormats/Vertex.h"
+#include "SimulationDataFormat/MCCompLabel.h"
 
 // debug
 #include "ITStracking/ClusterLines.h"
 #include "ITStracking/Tracklet.h"
 #include "ITStracking/Cluster.h"
+
 
 namespace o2
 {
@@ -63,7 +66,7 @@ class Vertexer
   template <typename... T>
   void findTracklets(T&&... args);
 
-  void findTrivialMCTracklets(std::vector<o2::its::label>  LabelVector);
+  void findTrivialMCTracklets(std::map <o2::MCCompLabel,o2::its::label>   LabelVector);
 
   void findVertices();
 
@@ -77,7 +80,7 @@ class Vertexer
   std::vector<Tracklet> getTracklets01() const;
   std::vector<Tracklet> getTracklets12() const;
   std::array<std::vector<Cluster>, 3> getClusters() const;
-  std::vector<std::array<float, 8>> getDeltaTanLambdas() const;
+  std::vector<std::array<float, 9>> getDeltaTanLambdas() const;
   std::vector<std::array<float, 4>> getCentroids() const;
   std::vector<std::array<float, 6>> getLinesData() const;
   void processLines(); 
@@ -99,7 +102,7 @@ void Vertexer::findTracklets(T&&... args)
   mTraits->computeTracklets(std::forward<T>(args)...);
 }
 
-inline void Vertexer::findTrivialMCTracklets(std::vector<o2::its::label>  LabelVector)
+inline void Vertexer::findTrivialMCTracklets( std::map <o2::MCCompLabel,o2::its::label>  LabelVector)
 {
   mTraits->computeTrackletsPureMontecarlo( LabelVector);
 }
@@ -177,9 +180,9 @@ inline std::array<std::vector<Cluster>, 3> Vertexer::getClusters() const
   return mTraits->mClusters;
 }
 
-inline std::vector<std::array<float, 8>> Vertexer::getDeltaTanLambdas() const
+inline std::vector<std::array<float, 9>> Vertexer::getDeltaTanLambdas() const
 {
-  return mTraits->mDeltaTanlambdas;
+  return mTraits->mTrackletInfo;
 }
 
 inline std::vector<std::array<float, 4>> Vertexer::getCentroids() const

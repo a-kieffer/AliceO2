@@ -74,6 +74,9 @@ void trackleterKernelSerial(
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < clustersCurrentLayer.size(); ++iCurrentLayerClusterIndex) {
     int storedTracklets{ 0 };
     const Cluster currentCluster{ clustersCurrentLayer[iCurrentLayerClusterIndex] };
+   // std::cout << "Cluster 0 Track ID : " << evt->getClusterLabels(1, currentCluster.clusterId).getTrackID()<< 
+   // " Event ID : "<< evt->getClusterLabels(1, currentCluster.clusterId).getEventID() << 
+   // " Source ID : " << evt->getClusterLabels(1, currentCluster.clusterId).getSourceID() << std::endl;
     const int layerIndex{ layerOrder == LAYER0_TO_LAYER1 ? 0 : 2 };
     // we get the rectangle which we will project on the next layer to know where to look for clusters
     const int4 selectedBinsRect{ VertexerTraits::getBinsRect(currentCluster, layerIndex, 0.f, 50.f, phiCut / 2) };  
@@ -98,15 +101,17 @@ void trackleterKernelSerial(
         // loop on clusters next layer
         for (int iNextLayerClusterIndex{ firstRowClusterIndex }; iNextLayerClusterIndex < maxRowClusterIndex && iNextLayerClusterIndex < static_cast<int>(clustersNextLayer.size()); ++iNextLayerClusterIndex) {
           const Cluster& nextCluster{ clustersNextLayer[iNextLayerClusterIndex] };
-
           const auto& lblNext = evt->getClusterLabels(layerIndex, nextCluster.clusterId);
           const auto& lblCurr = evt->getClusterLabels(1, currentCluster.clusterId);
-          const unsigned char testMC{ !isMc || (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid()) }; // isValid() : isSet() && !isNoise()
+          //const unsigned char testMC{ !isMc || (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid()) }; // isValid() : isSet() && !isNoise()
+          const unsigned char testMC{ !isMc || (lblNext.compare(lblCurr) == 1) };
           if (gpu::GPUCommonMath::Abs(currentCluster.phiCoordinate - nextCluster.phiCoordinate) < phiCut && testMC) {
-
-
+            if(testMC != (lblNext==lblCurr)){
+              std::cout << "No, it's not the same \n";
+            }
             if (storedTracklets < maxTrackletsPerCluster) {
               if (layerOrder == LAYER0_TO_LAYER1) {
+                //std::cout << "Track ID : " << lblNext.getTrackID()<< std::endl;
                 Tracklets.emplace_back(iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster);
               } else {
                 Tracklets.emplace_back(iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster);
@@ -131,7 +136,7 @@ void trackletSelectionKernelSerial(
   const std::vector<int>& foundTracklets01,
   const std::vector<int>& foundTracklets12,
   std::vector<Line>& destTracklets,
-  std::vector<std::array<float, 8>>& tlv,
+  std::vector<std::array<float, 9>>& tlv,
   const ROframe* evt = nullptr,
   float tanLambdaCut = 0.025f,
   float phiCut = 0.005f,
@@ -174,11 +179,11 @@ void trackletSelectionKernelSerial(
           const auto& lblClus1 = evt->getClusterLabels(1, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].clusterId);
           const auto& lblClus2 = evt->getClusterLabels(2, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].clusterId);
           const unsigned char isValidated{ (lblClus0.getTrackID() == lblClus1.getTrackID() && lblClus0.getTrackID() == lblClus2.getTrackID() && lblClus0.isValid()) };
-          tlv.push_back(std::array<float, 8>{ deltaTanLambda,
+          tlv.push_back(std::array<float, 9>{ deltaTanLambda,
                                               clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].zCoordinate, clustersNextLayer[tracklets01[iTracklet01].firstClusterIndex].rCoordinate,
                                               clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].zCoordinate, clustersCurrentLayer[tracklets01[iTracklet01].secondClusterIndex].rCoordinate,
                                               debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].zCoordinate, debugClustersLayer2[tracklets12[iTracklet12].secondClusterIndex].rCoordinate,
-                                              static_cast<float>(isValidated) });
+                                              static_cast<float>(lblClus0.getEventID()),static_cast<float>(isValidated) });
           if (isValidated) {
             ++realTracklets;
           } else {
@@ -220,7 +225,7 @@ void VertexerTraits::reset()
   mVertices.clear();
   mComb01.clear();
   mComb12.clear();
-  mDeltaTanlambdas.clear();
+  mTrackletInfo.clear();
   mCentroids.clear();
   mLinesData.clear();
   mLabels= nullptr;
@@ -301,7 +306,7 @@ void VertexerTraits::dumpIndexTable(const int iLayer)
             << std::endl;
 }
 
-void VertexerTraits::computeTrackletsPureMontecarlo(std::vector<o2::its::label>  LabelVector)
+void VertexerTraits::computeTrackletsPureMontecarlo(std::map<o2::MCCompLabel,o2::its::label>   LabelVector)
 {
 
 
@@ -326,13 +331,15 @@ void VertexerTraits::computeTrackletsPureMontecarlo(std::vector<o2::its::label> 
     auto& currentCluster{ mClusters[0][iCurrentLayerClusterIndex] };
     const auto& lblCurr = mEvent->getClusterLabels(0, currentCluster.clusterId);
     if ( lblCurr.isValid() && lblCurr.getSourceID() == 0) {
+        //std::cout << "Track label in Vertexer : " << lblCurr.getTrackID() << " Track label in LabelVector : " << LabelVector[ValidClusters].TrackId << std::endl;
         ValidClusters++;
       }
     for (unsigned int iNextLayerClusterIndex = 0; iNextLayerClusterIndex < mClusters[1].size(); iNextLayerClusterIndex++) {
       //std::cout << "iCluster next layer : " << iNextLayerClusterIndex << std::endl;
       const Cluster& nextCluster{ mClusters[1][iNextLayerClusterIndex] };
       const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId);
-      if (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid() /* && lblCurr.getSourceID() == 0*/) {
+      //if (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid() /* && lblCurr.getSourceID() == 0*/) {
+      if (lblNext.compare(lblCurr) == 1) {
         mComb01.emplace_back(iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster);
         //std::cout << "Indexes : " << lblCurr.getTrackID() << "   ,   " <<lblNext.getTrackID() << std::endl;
       }
@@ -357,18 +364,19 @@ void VertexerTraits::computeTrackletsPureMontecarlo(std::vector<o2::its::label> 
   for (auto& trklet01 : mComb01) {
     for (auto& trklet12 : mComb12) {
       if (trklet01.secondClusterIndex == trklet12.firstClusterIndex) {
+        const float evtID = static_cast<float>(mEvent->getClusterLabels(0, mClusters[0][trklet01.firstClusterIndex].clusterId));
         const float deltaTanLambda{ gpu::GPUCommonMath::Abs(trklet01.tanLambda - trklet12.tanLambda) };
-        mDeltaTanlambdas.push_back(std::array<float, 8>{ deltaTanLambda,
+        mTrackletInfo.push_back(std::array<float, 9>{ deltaTanLambda,
                                                          mClusters[0][trklet01.firstClusterIndex].zCoordinate, mClusters[0][trklet01.firstClusterIndex].rCoordinate,
                                                          mClusters[1][trklet01.secondClusterIndex].zCoordinate, mClusters[1][trklet01.secondClusterIndex].rCoordinate,
                                                          mClusters[2][trklet12.secondClusterIndex].zCoordinate, mClusters[2][trklet12.secondClusterIndex].rCoordinate,
-                                                         static_cast<float>(true) });
+                                                         evtID, static_cast<float>(true) });
       }
     }
   }
 #endif
 
-  std::cout << "tracklets 01 : "<<mComb01.size() << " tracklets 12 : "<< mComb12.size() << std::endl;
+  //std::cout << "tracklets 01 : "<<mComb01.size() << " tracklets 12 : "<< mComb12.size() << std::endl;
 
   tmp = mComb01.size();
 
@@ -421,7 +429,7 @@ void VertexerTraits::computeTracklets(const bool useMCLabel)
     foundTracklets01,
     foundTracklets12,
     mTracklets,
-    mDeltaTanlambdas,
+    mTrackletInfo,
     mEvent,
     mVrtParams.phiCut,
     mVrtParams.tanLambdaCut);
