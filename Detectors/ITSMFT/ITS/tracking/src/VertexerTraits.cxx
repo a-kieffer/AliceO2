@@ -319,7 +319,7 @@ void VertexerTraits::computeTrackletsPureMontecarlo(std::map<o2::MCCompLabel,o2:
   // arrangeClusters(NULL);
 
   //std::cout << "Running in Montecarlo trivial mode\n";
-  //std::cout << "clusters on L0: " << mClusters[0].size() << "  L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
+  std::cout << "clusters on L0: " << mClusters[0].size() << "  L1: " << mClusters[1].size() << " clusters on L2: " << mClusters[2].size() << std::endl;
 
   std::vector<int> foundTracklets01;
   std::vector<int> foundTracklets12;
@@ -328,20 +328,26 @@ void VertexerTraits::computeTrackletsPureMontecarlo(std::map<o2::MCCompLabel,o2:
 
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < mClusters[0].size(); ++iCurrentLayerClusterIndex) {
     //std::cout << "iCluster : : " << iCurrentLayerClusterIndex << std::endl;
+    if(iCurrentLayerClusterIndex%1000==0){
+      std::cout << "Cluster layer 0 : " << iCurrentLayerClusterIndex<< std::endl;
+    }
     auto& currentCluster{ mClusters[0][iCurrentLayerClusterIndex] };
     const auto& lblCurr = mEvent->getClusterLabels(0, currentCluster.clusterId);
-    if ( lblCurr.isValid() && lblCurr.getSourceID() == 0) {
-        //std::cout << "Track label in Vertexer : " << lblCurr.getTrackID() << " Track label in LabelVector : " << LabelVector[ValidClusters].TrackId << std::endl;
-        ValidClusters++;
-      }
-    for (unsigned int iNextLayerClusterIndex = 0; iNextLayerClusterIndex < mClusters[1].size(); iNextLayerClusterIndex++) {
-      //std::cout << "iCluster next layer : " << iNextLayerClusterIndex << std::endl;
-      const Cluster& nextCluster{ mClusters[1][iNextLayerClusterIndex] };
-      const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId);
-      //if (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid() /* && lblCurr.getSourceID() == 0*/) {
-      if (lblNext.compare(lblCurr) == 1) {
-        mComb01.emplace_back(iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster);
-        //std::cout << "Indexes : " << lblCurr.getTrackID() << "   ,   " <<lblNext.getTrackID() << std::endl;
+    if(lblCurr.getSourceID() == 0 && lblCurr.isValid()){
+      /* 
+      if ( lblCurr.isValid() && lblCurr.getSourceID() == 0) {
+          //std::cout << "Track label in Vertexer : " << lblCurr.getTrackID() << " Track label in LabelVector : " << LabelVector[ValidClusters].TrackId << std::endl;
+          ValidClusters++;
+        }*/
+      for (unsigned int iNextLayerClusterIndex = 0; iNextLayerClusterIndex < mClusters[1].size(); iNextLayerClusterIndex++) {
+        //std::cout << "iCluster next layer : " << iNextLayerClusterIndex << std::endl;
+        const Cluster& nextCluster{ mClusters[1][iNextLayerClusterIndex] };
+        const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId);
+        //if (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid() /* && lblCurr.getSourceID() == 0*/) {
+        if (lblNext.isValid() && lblNext.compare(lblCurr)) {
+          mComb01.emplace_back(iCurrentLayerClusterIndex, iNextLayerClusterIndex, currentCluster, nextCluster);
+          //std::cout << "Indexes : " << lblCurr.getTrackID() << "   ,   " <<lblNext.getTrackID() << std::endl;
+        }
       }
     }
   }
@@ -350,16 +356,22 @@ void VertexerTraits::computeTrackletsPureMontecarlo(std::map<o2::MCCompLabel,o2:
 
   for (unsigned int iCurrentLayerClusterIndex{ 0 }; iCurrentLayerClusterIndex < mClusters[2].size(); ++iCurrentLayerClusterIndex) {
     auto& currentCluster{ mClusters[2][iCurrentLayerClusterIndex] };
-    for (unsigned int iNextLayerClusterIndex = 0; iNextLayerClusterIndex < mClusters[1].size(); iNextLayerClusterIndex++) {
-      const Cluster& nextCluster{ mClusters[1][iNextLayerClusterIndex] };
-      const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId);
-      const auto& lblCurr = mEvent->getClusterLabels(2, currentCluster.clusterId);
-      if (lblNext.getTrackID() == lblCurr.getTrackID() && lblCurr.isValid()) {
-        mComb12.emplace_back(iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster);
+    const auto& lblCurr = mEvent->getClusterLabels(2, currentCluster.clusterId);
+    if(iCurrentLayerClusterIndex%1000==0){
+      std::cout << "Cluster layer 2 : " << iCurrentLayerClusterIndex<< std::endl;
+    }
+    if(lblCurr.getSourceID() == 0 && lblCurr.isValid()){
+      for (unsigned int iNextLayerClusterIndex = 0; iNextLayerClusterIndex < mClusters[1].size(); iNextLayerClusterIndex++) {
+        const Cluster& nextCluster{ mClusters[1][iNextLayerClusterIndex] };
+        const auto& lblNext = mEvent->getClusterLabels(1, nextCluster.clusterId); 
+        if (lblNext.isValid() && lblNext.compare(lblCurr)) {
+          mComb12.emplace_back(iNextLayerClusterIndex, iCurrentLayerClusterIndex, nextCluster, currentCluster);
+        }
       }
     }
   }
 
+/*
 #if defined(__VERTEXER_ITS_DEBUG)
   for (auto& trklet01 : mComb01) {
     for (auto& trklet12 : mComb12) {
@@ -375,8 +387,8 @@ void VertexerTraits::computeTrackletsPureMontecarlo(std::map<o2::MCCompLabel,o2:
     }
   }
 #endif
-
-  //std::cout << "tracklets 01 : "<<mComb01.size() << " tracklets 12 : "<< mComb12.size() << std::endl;
+ */
+  std::cout << "tracklets 01 : "<<mComb01.size() << " tracklets 12 : "<< mComb12.size() << std::endl;
 
   tmp = mComb01.size();
 
