@@ -52,7 +52,7 @@ struct lightVertex {
 };
 
 
-struct label {
+struct ClusterMCLabelInfo {
   /*
   label(int TId, int MId, int EId, float P){
     TrackID= TId;
@@ -84,7 +84,7 @@ class VertexerTraits
   virtual void reset();
   virtual void initialise(ROframe*);
   virtual void computeTracklets(const bool useMCLabel = false);
-  virtual void computeTrackletsPureMontecarlo(std::map <o2::MCCompLabel,o2::its::label>   LabelVector);
+  virtual void computeTrackletsPureMontecarlo(std::map <o2::MCCompLabel,o2::its::ClusterMCLabelInfo>   LabelVector);
   virtual void computeVertices();
 
   void updateVertexingParameters(const VertexingParameters& vrtPar);
@@ -108,7 +108,7 @@ class VertexerTraits
  std::vector<std::array<float, 9>> mTrackletInfo;
   std::vector<std::array<float, 6>> mLinesData;
   std::vector<std::array<float, 4>> mCentroids;
-  std::vector<o2::its::label> * mLabels;
+  std::vector<o2::its::ClusterMCLabelInfo> * mLabels;
   void processLines();
   void dumpIndexTable(const int);
 

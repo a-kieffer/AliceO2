@@ -306,7 +306,7 @@ void VertexerTraits::dumpIndexTable(const int iLayer)
             << std::endl;
 }
 
-void VertexerTraits::computeTrackletsPureMontecarlo(std::map<o2::MCCompLabel,o2::its::label>   LabelVector)
+void VertexerTraits::computeTrackletsPureMontecarlo(/**/ std::map<o2::MCCompLabel,o2::its::ClusterMCLabelInfo>   LabelVector)
 {
 
 

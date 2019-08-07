@@ -66,7 +66,7 @@ class Vertexer
   template <typename... T>
   void findTracklets(T&&... args);
 
-  void findTrivialMCTracklets(std::map <o2::MCCompLabel,o2::its::label>   LabelVector);
+  void findTrivialMCTracklets(std::map <o2::MCCompLabel,o2::its::ClusterMCLabelInfo>   LabelVector);
 
   void findVertices();
 
@@ -102,7 +102,7 @@ void Vertexer::findTracklets(T&&... args)
   mTraits->computeTracklets(std::forward<T>(args)...);
 }
 
-inline void Vertexer::findTrivialMCTracklets( std::map <o2::MCCompLabel,o2::its::label>  LabelVector)
+inline void Vertexer::findTrivialMCTracklets( std::map <o2::MCCompLabel,o2::its::ClusterMCLabelInfo>  LabelVector)
 {
   mTraits->computeTrackletsPureMontecarlo( LabelVector);
 }
